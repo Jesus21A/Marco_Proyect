@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ProyectoMarco
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.1.
@@ -61,4 +60,3 @@ For more information on using the Angular CLI, including detailed command refere
 =======
 # Marco_Proyect
 Proyecto en conjunto con Marco
->>>>>>> 490f26f2954d92e9733bb287b5ca82ce6df4aea8
