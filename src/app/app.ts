@@ -6,6 +6,11 @@ interface CalendarEvent {
   title: string;
   time: string;
   color: 'blue' | 'green' | 'yellow';
+  status: 'Vencido' | 'Finalizado' | 'Pendiente';
+  type: string; 
+  responsable: string;
+  supervisor: string;
+  fechaLimite: string;
 }
 
 interface ComplianceConfig {
@@ -92,8 +97,9 @@ interface NormogramaItem {
 }
 
 // --- TIPOS DE VISTA Y TEMA ---
-type View = 'calendar' | 'cumplimiento' | 'normograma';
-type ComplianceSubView = 'configuracion' | 'operacion' | 'cumplimentos';
+type View = 'calendar' | 'cumplimiento';
+type CalendarView = 'day' | 'week' | 'month';
+type ComplianceModuleView = 'normograma' | 'tipo' | 'operacion' | 'informes';
 type NormogramaSubView = 'grilla' | 'busqueda';
 type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
 
@@ -118,11 +124,12 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
       --color-primary-darker: #134E4A;/* teal-900 */
     }
     .theme-indigo {
-      --color-primary-light: #E0E7FF; /* indigo-100 */
-      --color-primary-text: #4F46E5;  /* indigo-600 */
-      --color-primary-medium: #6366F1;/* indigo-500 */
-      --color-primary-dark: #4338CA;  /* indigo-700 */
-      --color-primary-darker: #3730A3;/* indigo-800 */
+       /* Colores basados en el Prototipo PDF */
+      --color-primary-light: #F0F1FF; /* Un lila muy claro para fondos */
+      --color-primary-text: #5039A3;  /* El morado principal del prototipo */
+      --color-primary-medium: #6A48D9;/* Un morado un poco más brillante */
+      --color-primary-dark: #3E2B7A;  /* Morado oscuro para encabezados */
+      --color-primary-darker: #2D1E59;/* Morado aún más oscuro para hover/activo */
     }
     .theme-slate {
       --color-primary-light: #F1F5F9; /* slate-100 */
@@ -131,150 +138,146 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
       --color-primary-dark: #334155;  /* slate-700 */
       --color-primary-darker: #1E293B;/* slate-800 */
     }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .status-Vencido { background-color: #EF4444; } /* red-500 */
+    .status-Finalizado { background-color: #22C55E; } /* green-500 */
+    .status-Pendiente { background-color: #F59E0B; } /* amber-500 */
   `],
   template: `
-    <!-- aplicar la clase (css) del tema activo (marco: normalemente estos estilos se formatean en un json y se guardan en una bd) -->
-    <div class="flex h-screen bg-gray-200 font-sans" [ngClass]="'theme-' + activeTheme()">
-      <!-- Barra Lateral Izquierda -->
-      <aside class="w-16 flex-shrink-0 bg-white border-r flex flex-col items-center py-4 space-y-4">
-        <div class="w-10 h-10 flex items-center justify-center bg-[--color-primary-medium] text-white rounded-lg font-bold text-xl">G</div>
-        <nav class="flex flex-col space-y-2">
-          <a href="#" class="p-2 rounded-lg" title="Home" (click)="setView('calendar')"
-             [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text]': activeView() === 'calendar', 'text-gray-500 hover:bg-gray-200': activeView() !== 'calendar'}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    <div class="flex h-screen bg-gray-100 font-sans" [ngClass]="'theme-' + activeTheme()">
+      <!-- Barra Lateral Izquierda (Estilo Prototipo) -->
+      <aside class="w-64 flex-shrink-0 bg-[--color-primary-dark] flex flex-col">
+        <div class="h-20 flex items-center justify-center border-b border-white/10">
+          <h1 class="text-2xl font-bold text-white">SOFTWARE GCI</h1>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('calendar')"
+             [ngClass]="{'bg-white/20 font-semibold text-white': activeView() === 'calendar', 'hover:bg-white/10 hover:text-white': activeView() !== 'calendar'}">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            HOME
           </a>
-          <a href="#" class="p-2 rounded-lg" title="Cumplimiento" (click)="setView('cumplimiento')"
-             [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text]': activeView() === 'cumplimiento', 'text-gray-500 hover:bg-gray-200': activeView() !== 'cumplimiento'}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('cumplimiento')"
+              [ngClass]="{'bg-white/20 font-semibold text-white': activeView() === 'cumplimiento', 'hover:bg-white/10 hover:text-white': activeView() !== 'cumplimiento'}">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            CUMPLIMIENTO
           </a>
-          <a href="#" class="p-2 rounded-lg" title="Normograma" (click)="setView('normograma')"
-             [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text]': activeView() === 'normograma', 'text-gray-500 hover:bg-gray-200': activeView() !== 'normograma'}">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          </a>
-          <!-- Botón de cambio de tema -->
-           <div class="relative">
-             <a href="#" class="p-2 rounded-lg text-gray-500 hover:bg-gray-200" title="Apariencia" (click)="toggleThemeMenu()">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                </svg>
-             </a>
-             @if(isThemeMenuOpen()) {
-              <div class="absolute left-16 top-0 w-40 bg-white rounded-md shadow-lg border z-30">
-                <div class="p-2 font-semibold text-sm border-b">Color del Tema</div>
-                <div class="p-2 space-y-1">
-                   <button (click)="setTheme('blue')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
-                      <span class="w-4 h-4 rounded-full bg-blue-500 mr-2 border"></span> Azul
-                   </button>
-                   <button (click)="setTheme('teal')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
-                      <span class="w-4 h-4 rounded-full bg-teal-500 mr-2 border"></span> Verde Azulado
-                   </button>
-                   <button (click)="setTheme('indigo')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
-                      <span class="w-4 h-4 rounded-full bg-indigo-500 mr-2 border"></span> Índigo
-                   </button>
-                   <button (click)="setTheme('slate')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
-                      <span class="w-4 h-4 rounded-full bg-slate-500 mr-2 border"></span> Pizarra
-                   </button>
-                </div>
-              </div>
-             }
-           </div>
         </nav>
       </aside>
 
       <!-- Contenido Principal -->
       <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Header Superior (con colores dinámicos) -->
-        <header class="h-12 bg-[--color-primary-dark] text-white flex items-center justify-between px-4 shadow-md flex-shrink-0 z-20">
-            <div class="flex items-center">
-                <nav class="flex items-center">
-                    <a href="#" (click)="setView('calendar')" class="px-3 py-2 text-sm font-medium rounded-t-md" [ngClass]="{'bg-[--color-primary-darker]': activeView() === 'calendar', 'hover:bg-[--color-primary-dark] opacity-80': activeView() !== 'calendar'}">Mis Tareas</a>
-                    @if (activeView() === 'cumplimiento') {
-                      <a href="#" class="px-3 py-2 text-sm font-medium bg-[--color-primary-darker] rounded-t-md">Cumplimiento</a>
-                    }
-                    @if (activeView() === 'normograma') {
-                      <a href="#" (click)="setNormogramaSubView('grilla')" class="px-3 py-2 text-sm font-medium rounded-t-md" [ngClass]="{'bg-[--color-primary-darker]': normogramaSubView() === 'grilla', 'hover:bg-[--color-primary-dark] opacity-80': normogramaSubView() !== 'grilla'}">Gestión Normograma</a>
-                      @if(normogramaSubView() === 'busqueda') {
-                        <a href="#" class="px-3 py-2 text-sm font-medium bg-[--color-primary-darker] rounded-t-md">Búsqueda Normograma</a>
-                      }
-                    }
-                </nav>
+        <!-- Header Superior (Estilo Prototipo) -->
+        <header class="h-20 bg-white border-b flex items-center justify-between px-8">
+            <div>
+                <p class="text-sm text-gray-500">Inicio > Calendario</p>
+                <h2 class="text-2xl font-bold text-gray-800">HOLA, Camila !</h2>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="#" class="text-sm hover:bg-[--color-primary-dark] p-2 rounded-md flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg><span>Manuales</span></a>
-                <a href="#" class="text-sm hover:bg-[--color-primary-dark] p-2 rounded-md flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H3V9h2a4 4 0 004-4V3l4 4-4 4z" /></svg><span>Informes</span></a>
-                
-                <!-- Botón de Configuración con Menú Desplegable -->
                 <div class="relative">
-                    <button (click)="toggleConfigMenu()" class="text-sm hover:bg-[--color-primary-dark] p-2 rounded-md flex items-center space-x-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                      <span>Configuración</span>
+                    <button (click)="toggleFilterPanel()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100" title="Buscar Actividades">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" /></svg>
                     </button>
-                    @if(isConfigMenuOpen()) {
-                        <div class="absolute top-full left-0 mt-2 w-72 bg-[--color-primary-darker] rounded-md shadow-xl text-white font-semibold text-sm">
-                            <div class="relative" (mouseenter)="isParametroGeneralMenuOpen.set(true)" (mouseleave)="isParametroGeneralMenuOpen.set(false)">
-                                <a href="#" class="flex justify-between items-center p-3 hover:bg-[--color-primary-dark] rounded-t-md">
-                                    <span>AJUSTES PARÁMETRO GENERAL</span>
-                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
-                                </a>
-                                @if (isParametroGeneralMenuOpen()) {
-                                    <div class="absolute right-full top-0 mr-1 w-72 bg-white rounded-md shadow-xl border text-gray-800 p-2 font-normal">
-                                        <div class="space-y-1">
-                                            <a href="#" class="flex items-center p-2 rounded hover:bg-gray-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-[--color-primary-text]" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z" /><path d="M3 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                                                <span>1) BÁSICOS</span>
-                                            </a>
-                                            <a href="#" class="flex items-center p-2 rounded hover:bg-gray-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-[--color-primary-text]" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z" /><path d="M3 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                                                <span>2) USUARIOS</span>
-                                            </a>
-                                            <a href="#" class="flex items-center p-2 rounded hover:bg-gray-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-[--color-primary-text]" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z" /><path d="M3 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                                                <span>3) ORGANIZACIÓN</span>
-                                            </a>
-                                            <a href="#" class="flex items-center p-2 rounded hover:bg-gray-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-[--color-primary-text]" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z" /><path d="M3 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                                                <span>4) SISTEMA</span>
-                                            </a>
-                                            <a href="#" class="flex items-center p-2 rounded hover:bg-gray-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-[--color-primary-text]" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z" /><path d="M3 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                                                <span>5) PROCESOS</span>
-                                            </a>
-                                             <a href="#" class="flex items-center p-2 rounded hover:bg-gray-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-[--color-primary-text]" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z" /><path d="M3 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                                                <span>6) SINCRONIZACIÓN DE USUARIOS</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                }
+                    @if(isFilterPanelOpen()) {
+                    <div class="absolute right-0 mt-2 w-80 bg-white p-6 rounded-lg shadow-lg border text-sm z-30">
+                        <h3 class="font-bold text-lg mb-4 text-gray-800">Filtros</h3>
+                        <form #filterForm (submit)="applyFilters(filterForm)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="font-semibold text-gray-600 block mb-1">Estado de la tarea</label>
+                                    <select name="status" class="w-full p-2 border rounded-md bg-gray-50">
+                                      <option value="">Todos</option>
+                                      <option value="Pendiente">Pendiente</option>
+                                      <option value="Finalizado">Finalizado</option>
+                                      <option value="Vencido">Vencido</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold text-gray-600 block mb-1">Responsable</label>
+                                    <input type="text" name="responsable" class="w-full p-2 border rounded-md bg-gray-50">
+                                </div>
+                                <div>
+                                    <label class="font-semibold text-gray-600 block mb-1">Palabras clave</label>
+                                    <input type="text" name="keyword" class="w-full p-2 border rounded-md bg-gray-50">
+                                </div>
                             </div>
-                            <a href="#" class="flex justify-between items-center p-3 hover:bg-[--color-primary-dark]"><span>AJUSTES CUMPLIMIENTO</span> <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></a>
-                            <a href="#" class="flex justify-between items-center p-3 hover:bg-[--color-primary-dark] rounded-b-md"><span>AJUSTES WORKFLOW</span> <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></a>
-                        </div>
-                    }
+                            <div class="mt-6 flex justify-between">
+                                <button type="button" (click)="resetFilters(filterForm)" class="text-gray-600 hover:underline">Restablecer</button>
+                                <button type="submit" class="px-4 py-2 bg-[--color-primary-text] text-white font-semibold rounded-lg hover:bg-[--color-primary-dark]">Aceptar</button>
+                            </div>
+                        </form>
+                    </div>
+                   }
                 </div>
-
-                <!-- Botón de Usuario con Menú Desplegable -->
                 <div class="relative">
-                    <button (click)="toggleUserMenu()" class="flex items-center space-x-1 text-sm bg-[--color-primary-darker] px-2 py-1 rounded-md">
-                        <span>jchevaren</span>
-                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <button (click)="toggleThemeMenu()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100" title="Cambiar Apariencia">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                    </button>
+                     @if(isThemeMenuOpen()) {
+                      <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                        <div class="p-2 font-semibold text-sm border-b text-gray-700">Color del Tema</div>
+                        <div class="p-2 space-y-1">
+                           <button (click)="setTheme('indigo')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
+                              <span class="w-4 h-4 rounded-full bg-[#6A48D9] mr-2 border"></span> Predeterminado
+                           </button>
+                           <button (click)="setTheme('blue')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
+                              <span class="w-4 h-4 rounded-full bg-blue-500 mr-2 border"></span> Azul
+                           </button>
+                           <button (click)="setTheme('teal')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
+                              <span class="w-4 h-4 rounded-full bg-teal-500 mr-2 border"></span> Verde Azulado
+                           </button>
+                           <button (click)="setTheme('slate')" class="w-full text-left flex items-center px-2 py-1.5 text-sm rounded hover:bg-gray-100">
+                              <span class="w-4 h-4 rounded-full bg-slate-500 mr-2 border"></span> Pizarra
+                           </button>
+                        </div>
+                      </div>
+                     }
+                </div>
+                <div class="relative">
+                    <button (click)="toggleUpdatesMenu()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100" title="Actualizaciones">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                    </button>
+                     @if(isUpdatesMenuOpen()) {
+                        <div class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-30">
+                            <div class="p-2 space-y-1 text-sm">
+                                <a href="#" class="block px-3 py-2 rounded hover:bg-gray-100">Actualizaciones de GCI</a>
+                                <a href="#" class="block px-3 py-2 rounded hover:bg-gray-100">Noticias GCI</a>
+                                <a href="#" class="block px-3 py-2 rounded hover:bg-gray-100">Cambios de perfil</a>
+                                <a href="#" class="block px-3 py-2 rounded hover:bg-gray-100">Nuevos correos</a>
+                            </div>
+                        </div>
+                     }
+                </div>
+                <div class="relative">
+                    <button (click)="toggleUserMenu()" class="flex items-center space-x-2">
+                        <img class="h-10 w-10 rounded-full" src="https://placehold.co/40x40/6A48D9/FFFFFF?text=C" alt="User avatar">
+                        <div class="text-left">
+                            <div class="font-semibold text-gray-800">MARIA CAMILA CUERVO</div>
+                            <div class="text-xs text-gray-500">camicuervo1545@gmail.com</div>
+                        </div>
+                         <svg class="h-5 w-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                     </button>
                      @if (isUserMenuOpen()) {
-                        <div class="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border text-gray-800">
-                          <div class="p-4">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">jchavarro</h3>
-                            <div class="text-xs space-y-1 text-gray-600 border-b pb-3">
-                              <p><span class="font-semibold w-20 inline-block">Nombre:</span> Jhon Chavarro</p>
-                              <p><span class="font-semibold w-20 inline-block">Correo:</span> jchavarro@software.com.co</p>
-                              <p><span class="font-semibold w-20 inline-block">Cargo:</span> ANALISTA DE DESARROLLO</p>
-                              <p><span class="font-semibold w-20 inline-block">Superior:</span> IMPLEMENTADOR SD1</p>
-                              <p><span class="font-semibold w-20 inline-block">Fecha Ingreso:</span> 2013/11/13</p>
-                            </div>
-                            <div class="mt-3 text-sm space-y-2 border-b pb-3">
-                                <a href="#" class="flex items-center text-[--color-primary-text] hover:underline"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>Notificar datos</a>
-                                <a href="#" class="flex items-center text-[--color-primary-text] hover:underline"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H5v-2H3v-2H1v-4a6 6 0 016-6h1a2 2 0 012-2" /></svg>Cambio de contraseña</a>
-                                <a href="#" class="flex items-center text-[--color-primary-text] hover:underline"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>Salir del sistema</a>
-                            </div>
+                        <div class="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border text-gray-800 z-30">
+                          <div class="p-4 border-b">
+                            <p><span class="font-semibold text-sm">Cargo:</span> <span class="text-sm">Analista</span></p>
+                            <p><span class="font-semibold text-sm">Unidad:</span> <span class="text-sm">Cumplimiento</span></p>
+                            <p><span class="font-semibold text-sm">Perfil:</span> <span class="text-sm">Operativo</span></p>
+                          </div>
+                          <div class="p-2 text-sm flex justify-center">
+                              <a href="#" class="p-2 rounded-full hover:bg-red-100 text-red-500" title="Salir del sistema">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                  </svg>
+                              </a>
                           </div>
                         </div>
                       }
@@ -286,150 +289,141 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         <main class="flex-1 overflow-y-auto">
           @switch (activeView()) {
             @case ('calendar') {
-             <div class="flex flex-1 overflow-hidden p-4 space-x-4 h-full">
-                <!-- Panel Izquierdo: Calendario y Footer -->
-                <div class="flex-1 flex flex-col h-full">
-                    <!-- Panel del Calendario -->
-                    <div class="flex-1 flex flex-col bg-white rounded-lg shadow-md">
-                      <div class="flex items-center justify-between p-3 border-b">
-                        <div class="flex items-center space-x-2">
+              <div class="p-8 flex flex-1 h-full">
+                <!-- Calendario -->
+                <div class="flex-1 flex flex-col bg-white rounded-lg shadow-sm border">
+                  <div class="flex items-center justify-between p-4 border-b">
+                    <div class="flex items-center space-x-4">
+                      <button (click)="goToToday()" class="px-4 py-1.5 text-sm font-semibold text-gray-700 bg-gray-200 border rounded-md hover:bg-gray-300">Hoy</button>
+                       <div class="relative flex items-center space-x-2">
                           <button (click)="changeMonth(-1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
-                            <h2 class="text-lg font-bold text-gray-700 uppercase">{{ monthYear() }}</h2>
+                            <button (click)="toggleDatePicker()" class="text-lg font-bold text-gray-800 uppercase tracking-wider">{{ monthYear() }}</button>
                           <button (click)="changeMonth(1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
+                          @if(isDatePickerOpen()){
+                            <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-lg shadow-lg border z-20 p-4">
+                               <div class="flex items-center justify-between mb-2">
+                                  <button (click)="changeDatePickerYear(-1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full">&lt;</button>
+                                  <span class="font-bold text-lg">{{ datePickerDate().getFullYear() }}</span>
+                                  <button (click)="changeDatePickerYear(1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full">&gt;</button>
+                               </div>
+                               <div class="grid grid-cols-4 gap-2 text-sm">
+                                @for(month of months; track month; let i = $index) {
+                                  <button (click)="selectMonth(i)" class="p-2 rounded-md hover:bg-gray-100" [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text] font-semibold': i === currentDate().getMonth() && datePickerDate().getFullYear() === currentDate().getFullYear()}">{{month}}</button>
+                                }
+                               </div>
+                            </div>
+                          }
                         </div>
-                         <button (click)="goToToday()" class="px-3 py-1 text-xs font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50">Hoy</button>
-                      </div>
-                      <div class="grid grid-cols-7 flex-1 border-t border-l">
-                        @for(day of weekDays; track day) {<div class="p-2 text-center text-xs font-semibold text-gray-500 border-r border-b bg-gray-50">{{ day }}</div>}
+                    </div>
+                    <div class="flex items-center space-x-1 border rounded-lg p-1 text-sm">
+                        <button (click)="setCalendarView('day')" class="px-3 py-1 rounded-md" [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text] font-semibold': calendarView() === 'day', 'hover:bg-gray-100': calendarView() !== 'day'}">Día</button>
+                        <button (click)="setCalendarView('week')" class="px-3 py-1 rounded-md" [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text] font-semibold': calendarView() === 'week', 'hover:bg-gray-100': calendarView() !== 'week'}">Semana</button>
+                        <button (click)="setCalendarView('month')" class="px-3 py-1 rounded-md" [ngClass]="{'bg-[--color-primary-light] text-[--color-primary-text] font-semibold': calendarView() === 'month', 'hover:bg-gray-100': calendarView() !== 'month'}">Mes</button>
+                    </div>
+                  </div>
+
+                  @switch(calendarView()){
+                    @case('month'){
+                      <div class="grid grid-cols-7 flex-1">
+                        @for(day of weekDays; track day) {<div class="py-3 text-center text-sm font-semibold text-gray-500 border-b border-r">{{ day }}</div>}
                         @for(day of calendarDays(); track day.fullDate) {
-                          <div class="p-2 border-r border-b flex flex-col min-h-[100px]" [class.bg-gray-50]="!day.isCurrentMonth">
-                            <span class="text-sm font-medium self-end" [class.text-gray-400]="!day.isCurrentMonth" [class.text-white]="day.isToday" [class.bg-[--color-primary-medium]]="day.isToday" [class.rounded-full]="day.isToday" [class.w-6]="day.isToday" [class.h-6]="day.isToday" [class.flex]="day.isToday" [class.items-center]="day.isToday" [class.justify-center]="day.isToday">{{ day.day }}</span>
+                          <div (click)="handleDayClick(day, $event)" class="p-2 border-b border-r flex flex-col min-h-[120px] cursor-pointer" [class.bg-gray-50]="!day.isCurrentMonth">
+                            <span class="text-sm font-medium self-end" [ngClass]="{'text-gray-400': !day.isCurrentMonth, 'text-white bg-[--color-primary-text]': day.isToday, 'rounded-full w-7 h-7 flex items-center justify-center': day.isToday}">{{ day.day }}</span>
+                            <div class="mt-1 space-y-1 text-xs event-container">
+                              @for(event of day.events; track event.title) {
+                                <div (click)="openEventDetails(event)" class="p-1 rounded-md event-item" [ngClass]="{
+                                  'bg-red-100 text-red-800': event.status === 'Vencido',
+                                  'bg-green-100 text-green-800': event.status === 'Finalizado',
+                                  'bg-amber-100 text-amber-800': event.status === 'Pendiente'
+                                }">
+                                  <span class="status-dot" [ngClass]="'status-' + event.status"></span>
+                                  {{ event.title }}
+                                </div>
+                              }
+                            </div>
                           </div>
                         }
                       </div>
-                    </div>
-                  <!-- Barra de Estado Inferior -->
-                  <footer class="h-10 bg-gray-100 flex items-center justify-between px-4 mt-4 rounded-lg shadow-inner flex-shrink-0">
-                      <input type="text" placeholder="Buscar en Aerts..." class="text-sm border rounded py-1 px-2 w-1/3 bg-white">
-                      <div class="text-xs text-gray-600">
-                          ISO 1.177.0 | PHP 5.6 | Viernes 29 de Agosto del 2025
+                    }
+                    @case('week'){
+                      <div class="grid grid-cols-7 flex-1">
+                        @for(day of weekData(); track day.fullDate){
+                          <div class="text-center py-3 font-semibold text-gray-600 border-b border-r">
+                            {{ day.dayName }} <span class="text-gray-500 font-bold">{{day.dayNumber}}</span>
+                          </div>
+                        }
+                        @for(day of weekData(); track day.fullDate){
+                          <div class="border-b border-r p-2 min-h-[400px]">
+                             @for(event of day.events; track event.title) {
+                                <div (click)="openEventDetails(event)" class="p-2 mt-1 rounded-md cursor-pointer" [ngClass]="{
+                                  'bg-red-100 text-red-800': event.status === 'Vencido',
+                                  'bg-green-100 text-green-800': event.status === 'Finalizado',
+                                  'bg-amber-100 text-amber-800': event.status === 'Pendiente'
+                                }">
+                                  <p class="font-bold">{{event.title}}</p>
+                                  <p class="text-xs">{{event.time}}</p>
+                                </div>
+                              }
+                          </div>
+                        }
                       </div>
-                  </footer>
-                </div>
+                    }
+                     @case('day'){
+                        <div class="p-4 overflow-y-auto">
+                           <h3 class="text-lg font-bold text-gray-800 mb-4">{{selectedDate().toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'})}}</h3>
+                           <div class="space-y-4">
+                              @for(event of dayData(); track event.title){
+                                 <div (click)="openEventDetails(event)" class="p-3 rounded-lg cursor-pointer flex items-start space-x-4" [ngClass]="{
+                                  'bg-red-50 border-l-4 border-red-500': event.status === 'Vencido',
+                                  'bg-green-50 border-l-4 border-green-500': event.status === 'Finalizado',
+                                  'bg-amber-50 border-l-4 border-amber-500': event.status === 'Pendiente'
+                                }">
+                                  <div class="w-20 text-sm font-semibold text-gray-600">{{event.time}}</div>
+                                  <div>
+                                    <p class="font-bold text-gray-800">{{event.title}}</p>
+                                    <p class="text-sm text-gray-500">{{event.type}}</p>
+                                  </div>
+                                </div>
+                              }
+                              @empty {
+                                <div class="text-center py-10 text-gray-500">No hay eventos para este día.</div>
+                              }
+                           </div>
+                        </div>
+                    }
+                  }
 
-                <!-- Panel Derecho: Barra Lateral de Filtros -->
-                <aside class="w-80 flex-shrink-0 bg-white rounded-lg shadow-md p-4 flex flex-col text-sm">
-                    <button class="w-full bg-gray-200 py-2 rounded-md font-semibold text-gray-700 hover:bg-gray-300 mb-4">GUARDAR FILTROS</button>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <label class="font-semibold text-gray-600">VISTA:</label>
-                            <select class="border rounded-md text-xs p-2 w-48"><option>CALENDARIO</option></select>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="font-semibold text-gray-600">ESTADO:</label>
-                            <div class="flex items-center">
-                                <select class="border rounded-md text-xs p-2 w-40"><option>ABIERTO</option></select>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="font-semibold text-gray-600">RESPONSABLE:</label>
-                            <select class="border rounded-md text-xs p-2 w-48"><option>TODOS</option></select>
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-4 border-t">
-                        <label class="flex items-center">
-                            <input type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-[--color-primary-text] focus:ring-[--color-primary-medium]">
-                            <span class="ml-2 font-semibold text-gray-700">TODOS</span>
-                        </label>
-                    </div>
-                    <div class="mt-4">
-                        <div class="bg-[--color-primary-dark] text-white p-2 rounded-t-md font-bold text-xs">CUMPLIMIENTO</div>
-                        <div class="border border-t-0 p-2 rounded-b-md">
-                             <label class="flex items-center">
-                                <input type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-[--color-primary-text] focus:ring-[--color-primary-medium]">
-                                <span class="ml-2 text-gray-700">Mis cumplimientos</span>
-                            </label>
-                        </div>
-                    </div>
-                     <div class="mt-2">
-                        <div class="bg-[--color-primary-dark] text-white p-2 rounded-t-md font-bold text-xs">WORKFLOW</div>
-                        <div class="border border-t-0 p-2 rounded-b-md">
-                             <label class="flex items-center">
-                                <input type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-[--color-primary-text] focus:ring-[--color-primary-medium]">
-                                <span class="ml-2 text-gray-700">Mis gestiones de flujos</span>
-                            </label>
-                        </div>
-                    </div>
-                </aside>
+                </div>
               </div>
             }
             @case ('cumplimiento') {
-              <!-- Módulo de Cumplimiento con Pestañas -->
-              <div class="bg-white p-4 rounded-lg shadow h-full flex flex-col">
-                <div class="border-b border-gray-200">
-                  <nav class="-mb-px flex space-x-4" aria-label="Tabs">
-                    <button (click)="setComplianceSubView('configuracion')" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" [ngClass]="{'border-[--color-primary-medium] text-[--color-primary-text]': complianceSubView() === 'configuracion', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': complianceSubView() !== 'configuracion'}">
-                      Tipo de Cumplimiento
-                    </button>
-                    <button (click)="setComplianceSubView('operacion')" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" [ngClass]="{'border-[--color-primary-medium] text-[--color-primary-text]': complianceSubView() === 'operacion', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': complianceSubView() !== 'operacion'}">
-                      Operación de Cumplimiento
-                    </button>
-                    <button (click)="setComplianceSubView('cumplimentos')" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" [ngClass]="{'border-[--color-primary-medium] text-[--color-primary-text]': complianceSubView() === 'cumplimentos', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': complianceSubView() !== 'cumplimentos'}">
-                      Cumplimientos
-                    </button>
-                  </nav>
-                </div>
-                @if (complianceSubView() === 'configuracion') {
-                  <div class="flex-grow flex flex-col"><div class="flex items-center space-x-2 p-3 bg-gray-50 border-b"><button (click)="openComplianceModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button><button (click)="openComplianceModal(selectedComplianceItem())" [disabled]="selectedComplianceIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button><button (click)="deleteSelectedComplianceItems()" [disabled]="selectedComplianceIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button><button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button></div><div class="overflow-y-auto flex-grow"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceSelected()" (change)="toggleSelectAllCompliance($event)"></th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Abreviación</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">@for (item of complianceData(); track item.id) {<tr class="hover:bg-gray-50"><td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceIds().has(item.id)" (change)="toggleSelectComplianceItem(item.id)"></td><td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td><td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.nombre }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.abreviacion }}</td></tr>} @empty {<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay datos de configuración.</td></tr>}</tbody></table></div></div>
-                }
-                @if (complianceSubView() === 'operacion') {
-                    <div class="flex-grow flex flex-col">
-                        <!-- Toolbar -->
-                        <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
-                            <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
-                            <button [disabled]="selectedComplianceOperationIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
-                            <button [disabled]="selectedComplianceOperationIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
-                            <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg><span>Buscar</span></button>
-                            <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>      
-                            <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M3 3a2 2 0 00-2 2v6a2 2 0 002 2h1V9a4 4 0 014-4h6V3a2 2 0 00-2-2H3z" /></svg><span>Clonar</span></button>
-                             <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
-                        </div>
-                        <!-- Grid -->
-                        <div class="overflow-y-auto flex-grow">
-                          <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50 sticky top-0">
-                              <tr>
-                                <th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceOperationSelected()" (change)="toggleSelectAllComplianceOperation($event)"></th>
-                                <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                                <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cumplimiento</th>
-                                <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                                <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                                <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha Creación</th>
-                                <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unidad Organizativa</th>
-                              </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @for (item of complianceOperationData(); track item.id) {
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceOperationIds().has(item.id)" (change)="toggleSelectComplianceOperationItem(item.id)"></td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.cumplimiento }}</td>
-                                    <td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td>
-                                    <td class="px-6 py-3 text-sm text-gray-500">{{ item.tipo }}</td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.fechaCreacion }}</td>
-                                    <td class="px-6 py-3 text-sm text-gray-500">{{ item.unidadOrganizativa }}</td>
-                                </tr>
-                                } @empty {
-                                    <tr><td colspan="7" class="text-center py-8 text-gray-500">No hay datos de operación.</td></tr>
-                                }
-                            </tbody>
-                          </table>
-                        </div>
-                    </div>
-                }
-                 @if (complianceSubView() === 'cumplimentos') {
-                    <div class="flex-grow flex flex-col p-2 space-y-2">
+              <div class="flex flex-1 h-full">
+                <!-- Secondary Sidebar for Cumplimiento -->
+                <aside class="w-60 flex-shrink-0 bg-white border-r flex flex-col">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
+                        <a href="#" (click)="setComplianceModuleView('normograma')" class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md" [ngClass]="{'bg-gray-200 text-gray-900': complianceModuleView() === 'normograma', 'hover:bg-gray-100': complianceModuleView() !== 'normograma'}">
+                            Normograma
+                        </a>
+                        <a href="#" (click)="setComplianceModuleView('tipo')" class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md" [ngClass]="{'bg-gray-200 text-gray-900': complianceModuleView() === 'tipo', 'hover:bg-gray-100': complianceModuleView() !== 'tipo'}">
+                            Tipo Cumplimiento
+                        </a>
+                        <a href="#" (click)="setComplianceModuleView('operacion')" class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md" [ngClass]="{'bg-gray-200 text-gray-900': complianceModuleView() === 'operacion', 'hover:bg-gray-100': complianceModuleView() !== 'operacion'}">
+                            Operación de Cumplimiento
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-gray-400 rounded-md cursor-not-allowed">
+                            Informes
+                        </a>
+                    </nav>
+                </aside>
+
+                <!-- Content Area for Cumplimiento -->
+                <div class="flex-1 overflow-y-auto p-6">
+                  @if(isComplianceDetailView()){
+                      <div class="flex-grow flex flex-col p-2 space-y-2">
+                        <button (click)="goBackToComplianceList()" class="self-start mb-4 flex items-center text-sm text-[--color-primary-text] hover:underline">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                          Volver a Operaciones
+                        </button>
                         <!-- Formulario -->
                         <div class="bg-gray-100 p-2 border rounded-md">
                             <div class="bg-[--color-primary-dark] text-white font-bold p-2 rounded-t-md text-sm">CUMPLIMIENTO</div>
@@ -524,130 +518,270 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                 </div>
                               </div>
                         </div>
-                    </div>
-                }
-              </div>
-            }
-            @case ('normograma') {
-              <!-- Módulo de Normograma -->
-              <div class="p-4 h-full flex flex-col">
-                @if (normogramaSubView() === 'grilla') {
-                  <div class="flex-grow bg-white rounded-lg shadow-md flex flex-col">
-                    <div class="flex-shrink-0 p-3 bg-gray-100 rounded-t-lg border-b">
-                       <h2 class="text-sm font-semibold text-gray-600">GESTIÓN NORMOGRAMA</h2>
-                     </div>
-                    <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
-                      <button (click)="openNormogramaModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
-                      <button (click)="openNormogramaModal(selectedNormogramaItem())" [disabled]="selectedNormogramaIds().size !== 1" [class.cursor-not-allowed]="selectedNormogramaIds().size !== 1" [class.text-gray-400]="selectedNormogramaIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
-                      <button (click)="deleteSelectedNormogramaItems()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
-                      <button (click)="setNormogramaSubView('busqueda')" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg><span>Buscar</span></button>
-                      <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>
-                      <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
-                    </div>
-                    <div class="overflow-auto flex-grow">
-                      <table class="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead class="bg-gray-50 sticky top-0">
-                          <tr>
-                            <th class="px-2 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllNormogramaSelected()" (change)="toggleSelectAllNormograma($event)"></th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Consecutivo</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Título</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Responsable</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Tipo Norma</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Asunto</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Entidad</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Estado</th>
-                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">F. Expedición</th>
-                          </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                          @for (item of normogramaData(); track item.id) {
-                            <tr class="hover:bg-gray-50">
-                              <td class="px-2 py-2"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedNormogramaIds().has(item.id)" (change)="toggleSelectNormogramaItem(item.id)"></td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.consecutivo }}</td>
-                              <td class="px-4 py-2 text-gray-900" style="min-width: 300px; white-space: normal;">{{ item.titulo }}</td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.responsable }}</td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.tipoNorma }}</td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.asunto }}</td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.entidad }}</td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.estado }}</td>
-                              <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.fechaExpedicion }}</td>
-                            </tr>
-                          } @empty {
-                            <tr><td colspan="9" class="text-center py-8 text-gray-500">No hay datos en el normograma.</td></tr>
-                          }
-                        </tbody>
-                      </table>
-                    </div>
-                     <div class="flex-shrink-0 flex items-center justify-between p-2 bg-gray-50 border-t text-xs text-gray-600">
-                        <span>Mostrando 1 - 9 de 174</span>
-                    </div>
-                  </div>
-                }
-                @if (normogramaSubView() === 'busqueda') {
-                  <div class="flex-grow flex flex-col text-sm">
-                       <!-- Search Box Section -->
-                        <div class="bg-gray-200 p-4 border-b">
-                          <div class="bg-[--color-primary-darker] p-2 text-white font-bold text-center text-xs">BUSCADOR NORMOGRAMA</div>
-                          <div class="bg-white p-4 flex items-center justify-center space-x-2">
-                              <div class="relative flex-grow">
-                                  <input type="text" #searchInput (input)="normogramaSearchQuery.set(searchInput.value)" [value]="normogramaSearchQuery()" class="w-full p-2 border rounded-md pr-10">
-                                  <span class="absolute right-3 top-2.5 text-gray-400">
-                                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
-                                  </span>
+                      </div>
+                  } @else {
+                      @switch(complianceModuleView()){
+                        @case('normograma'){
+                            <!-- Módulo de Normograma -->
+                            <div class="h-full flex flex-col">
+                                @if (normogramaSubView() === 'grilla') {
+                                <div class="flex-grow bg-white rounded-lg shadow-md flex flex-col">
+                                    <div class="flex-shrink-0 p-3 bg-gray-100 rounded-t-lg border-b">
+                                    <h2 class="text-sm font-semibold text-gray-600">GESTIÓN NORMOGRAMA</h2>
+                                    </div>
+                                    <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
+                                    <button (click)="openNormogramaModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
+                                    <button (click)="openNormogramaModal(selectedNormogramaItem())" [disabled]="selectedNormogramaIds().size !== 1" [class.cursor-not-allowed]="selectedNormogramaIds().size !== 1" [class.text-gray-400]="selectedNormogramaIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
+                                    <button (click)="deleteSelectedNormogramaItems()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
+                                    <button (click)="setNormogramaSubView('busqueda')" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg><span>Buscar</span></button>
+                                    <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>
+                                    <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
+                                    </div>
+                                    <div class="overflow-auto flex-grow">
+                                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                        <thead class="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-2 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllNormogramaSelected()" (change)="toggleSelectAllNormograma($event)"></th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Consecutivo</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Título</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Responsable</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Tipo Norma</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Asunto</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Entidad</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Estado</th>
+                                            <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">F. Expedición</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                        @for (item of normogramaData(); track item.id) {
+                                            <tr class="hover:bg-gray-50">
+                                            <td class="px-2 py-2"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedNormogramaIds().has(item.id)" (change)="toggleSelectNormogramaItem(item.id)"></td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.consecutivo }}</td>
+                                            <td class="px-4 py-2 text-gray-900" style="min-width: 300px; white-space: normal;">{{ item.titulo }}</td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.responsable }}</td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.tipoNorma }}</td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.asunto }}</td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.entidad }}</td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.estado }}</td>
+                                            <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.fechaExpedicion }}</td>
+                                            </tr>
+                                        } @empty {
+                                            <tr><td colspan="9" class="text-center py-8 text-gray-500">No hay datos en el normograma.</td></tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                    </div>
+                                    <div class="flex-shrink-0 flex items-center justify-between p-2 bg-gray-50 border-t text-xs text-gray-600">
+                                        <span>Mostrando 1 - 9 de 174</span>
+                                    </div>
+                                </div>
+                                }
+                                @if (normogramaSubView() === 'busqueda') {
+                                <div class="flex-grow flex flex-col text-sm">
+                                    <!-- Search Box Section -->
+                                        <div class="bg-gray-200 p-4 border-b">
+                                        <div class="bg-[--color-primary-darker] p-2 text-white font-bold text-center text-xs">BUSCADOR NORMOGRAMA</div>
+                                        <div class="bg-white p-4 flex items-center justify-center space-x-2">
+                                            <div class="relative flex-grow">
+                                                <input type="text" #searchInput (input)="normogramaSearchQuery.set(searchInput.value)" [value]="normogramaSearchQuery()" class="w-full p-2 border rounded-md pr-10">
+                                                <span class="absolute right-3 top-2.5 text-gray-400">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                                                </span>
+                                            </div>
+                                            <button (click)="searchNormograma()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Buscar</button>
+                                            <button (click)="clearNormogramaSearch()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Limpiar</button>
+                                        </div>
+                                        </div>
+                                        <!-- Results Section -->
+                                        <div class="flex-grow bg-white flex flex-col">
+                                            <div class="flex items-center space-x-2 p-3 bg-[--color-primary-darker] text-white text-xs font-bold">
+                                            NORMOGRAMA
+                                            </div>
+                                            <div class="overflow-y-auto flex-grow">
+                                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                                <thead class="bg-gray-50 sticky top-0">
+                                                <tr>
+                                                    <th class="px-2 py-2 text-left font-semibold text-gray-600 uppercase">Ver</th>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Cod</th>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Estado</th>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Tipo Norma</th>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Consecutivo</th>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Título</th>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Asunto</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody class="bg-white divide-y divide-gray-200">
+                                                @if (normogramaSearchResults() !== null) {
+                                                    @for(item of normogramaSearchResults(); track item.id) {
+                                                    <tr class="hover:bg-gray-50">
+                                                        <td class="px-2 py-2"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]"></td>
+                                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500"></td>
+                                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.estado }}</td>
+                                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.tipoNorma }}</td>
+                                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.consecutivo }}</td>
+                                                        <td class="px-4 py-2 text-gray-900">{{ item.titulo }}</td>
+                                                        <td class="px-4 py-2 text-gray-900">{{ item.asunto }}</td>
+                                                    </tr>
+                                                    }
+                                                }
+                                                @if(normogramaSearchResults()?.length === 0) {
+                                                    <tr><td colspan="7" class="text-center py-8 text-gray-500">No se encontraron resultados.</td></tr>
+                                                }
+                                                </tbody>
+                                            </table>
+                                                @if (normogramaSearchResults() === null) {
+                                                <div class="text-center py-8 text-gray-500">Realice una búsqueda para ver los resultados.</div>
+                                                }
+                                            </div>
+                                        </div>
+                                </div>
+                                }
+                            </div>
+                        }
+                        @case('tipo'){
+                           <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md"><div class="flex items-center space-x-2 p-3 bg-gray-50 border-b"><button (click)="openComplianceModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button><button (click)="openComplianceModal(selectedComplianceItem())" [disabled]="selectedComplianceIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button><button (click)="deleteSelectedComplianceItems()" [disabled]="selectedComplianceIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button><button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button></div><div class="overflow-y-auto flex-grow"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceSelected()" (change)="toggleSelectAllCompliance($event)"></th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Abreviación</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">@for (item of complianceData(); track item.id) {<tr class="hover:bg-gray-50"><td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceIds().has(item.id)" (change)="toggleSelectComplianceItem(item.id)"></td><td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td><td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.nombre }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.abreviacion }}</td></tr>} @empty {<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay datos de configuración.</td></tr>}</tbody></table></div></div>
+                        }
+                        @case('operacion'){
+                          <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md">
+                              <!-- Toolbar -->
+                              <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
+                                  <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
+                                  <button (click)="editSelectedComplianceOperation()" [disabled]="selectedComplianceOperationIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
+                                  <button [disabled]="selectedComplianceOperationIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
+                                  <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg><span>Buscar</span></button>
+                                  <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>      
+                                  <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M3 3a2 2 0 00-2 2v6a2 2 0 002 2h1V9a4 4 0 014-4h6V3a2 2 0 00-2-2H3z" /></svg><span>Clonar</span></button>
+                                  <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
                               </div>
-                              <button (click)="searchNormograma()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Buscar</button>
-                              <button (click)="clearNormogramaSearch()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Limpiar</button>
+                              <!-- Grid -->
+                              <div class="overflow-y-auto flex-grow">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                  <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                      <th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceOperationSelected()" (change)="toggleSelectAllComplianceOperation($event)"></th>
+                                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cumplimiento</th>
+                                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha Creación</th>
+                                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unidad Organizativa</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody class="bg-white divide-y divide-gray-200">
+                                      @for (item of complianceOperationData(); track item.id) {
+                                      <tr class="hover:bg-gray-50">
+                                          <td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceOperationIds().has(item.id)" (change)="toggleSelectComplianceOperationItem(item.id)"></td>
+                                          <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td>
+                                          <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.cumplimiento }}</td>
+                                          <td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td>
+                                          <td class="px-6 py-3 text-sm text-gray-500">{{ item.tipo }}</td>
+                                          <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.fechaCreacion }}</td>
+                                          <td class="px-6 py-3 text-sm text-gray-500">{{ item.unidadOrganizativa }}</td>
+                                      </tr>
+                                      } @empty {
+                                          <tr><td colspan="7" class="text-center py-8 text-gray-500">No hay datos de operación.</td></tr>
+                                      }
+                                  </tbody>
+                                </table>
+                              </div>
                           </div>
-                        </div>
-                        <!-- Results Section -->
-                         <div class="flex-grow bg-white flex flex-col">
-                            <div class="flex items-center space-x-2 p-3 bg-[--color-primary-darker] text-white text-xs font-bold">
-                              NORMOGRAMA
-                            </div>
-                            <div class="overflow-y-auto flex-grow">
-                               <table class="min-w-full divide-y divide-gray-200 text-sm">
-                                 <thead class="bg-gray-50 sticky top-0">
-                                   <tr>
-                                    <th class="px-2 py-2 text-left font-semibold text-gray-600 uppercase">Ver</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Cod</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Estado</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Tipo Norma</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Consecutivo</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Título</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-600 uppercase">Asunto</th>
-                                   </tr>
-                                 </thead>
-                                 <tbody class="bg-white divide-y divide-gray-200">
-                                   @if (normogramaSearchResults() !== null) {
-                                     @for(item of normogramaSearchResults(); track item.id) {
-                                       <tr class="hover:bg-gray-50">
-                                        <td class="px-2 py-2"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]"></td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500"></td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.estado }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.tipoNorma }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ item.consecutivo }}</td>
-                                        <td class="px-4 py-2 text-gray-900">{{ item.titulo }}</td>
-                                        <td class="px-4 py-2 text-gray-900">{{ item.asunto }}</td>
-                                       </tr>
-                                     }
-                                   }
-                                   @if(normogramaSearchResults()?.length === 0) {
-                                     <tr><td colspan="7" class="text-center py-8 text-gray-500">No se encontraron resultados.</td></tr>
-                                   }
-                                 </tbody>
-                               </table>
-                                @if (normogramaSearchResults() === null) {
-                                   <div class="text-center py-8 text-gray-500">Realice una búsqueda para ver los resultados.</div>
-                                  }
-                            </div>
-                          </div>
-                  </div>
-                }
+                        }
+                        @case('informes'){
+                           <div class="p-4 bg-white rounded-lg shadow"><h2 class="text-2xl font-bold text-gray-800">Módulo de Informes</h2><p class="mt-2 text-gray-600">Esta sección se encuentra en proceso de análisis.</p></div>
+                        }
+                      }
+                  }
+                </div>
               </div>
             }
           }
         </main>
       </div>
+
+       <!-- Modal de Detalles del Evento -->
+      @if(selectedEvent()){
+        <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <header class="p-4 border-b flex justify-between items-center">
+              <h3 class="text-lg font-bold text-gray-800">{{selectedEvent()?.title}}</h3>
+              <button (click)="closeEventDetails()" class="p-1 rounded-full hover:bg-gray-200">&times;</button>
+            </header>
+            <div class="p-6 space-y-3 text-sm">
+              <p><span class="font-semibold text-gray-600 w-28 inline-block">Estado:</span> 
+                <span class="px-2 py-1 text-xs rounded-full" [ngClass]="{
+                  'bg-red-100 text-red-800': selectedEvent()?.status === 'Vencido',
+                  'bg-green-100 text-green-800': selectedEvent()?.status === 'Finalizado',
+                  'bg-amber-100 text-amber-800': selectedEvent()?.status === 'Pendiente'
+                }">{{selectedEvent()?.status}}</span>
+              </p>
+              <p><span class="font-semibold text-gray-600 w-28 inline-block">Tipo de Tarea:</span> {{selectedEvent()?.type}}</p>
+              <p><span class="font-semibold text-gray-600 w-28 inline-block">Responsable:</span> {{selectedEvent()?.responsable}}</p>
+              <p><span class="font-semibold text-gray-600 w-28 inline-block">Supervisor:</span> {{selectedEvent()?.supervisor}}</p>
+              <p><span class="font-semibold text-gray-600 w-28 inline-block">Fecha Límite:</span> {{selectedEvent()?.fechaLimite}}</p>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal para Agregar Evento -->
+       @if(isAddEventModalOpen()){
+        <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg flex justify-between items-center">
+               <h3 class="text-lg font-semibold">Crear Nueva Tarea</h3>
+                <button (click)="closeAddEventModal()" class="text-white hover:text-gray-200">&times;</button>
+             </header>
+             <form #addEventForm (submit)="saveNewEvent(addEventForm)">
+                <div class="p-6 bg-gray-50 space-y-4 text-sm">
+                   <div>
+                      <label class="font-semibold text-gray-700 block mb-1">Título de la Tarea</label>
+                      <input type="text" name="title" required class="w-full p-2 border rounded-md">
+                   </div>
+                   <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="font-semibold text-gray-700 block mb-1">Estado</label>
+                        <select name="status" class="w-full p-2 border rounded-md bg-white">
+                          <option>Pendiente</option>
+                          <option>Finalizado</option>
+                          <option>Vencido</option>
+                        </select>
+                      </div>
+                       <div>
+                        <label class="font-semibold text-gray-700 block mb-1">Tipo de Tarea</label>
+                        <select name="type" class="w-full p-2 border rounded-md bg-white">
+                          <option>TAREA CUMPLIMIENTO</option>
+                          <option>NORMOGRAMA</option>
+                        </select>
+                      </div>
+                   </div>
+                   <div>
+                      <label class="font-semibold text-gray-700 block mb-1">Responsable</label>
+                      <input type="text" name="responsable" required class="w-full p-2 border rounded-md">
+                   </div>
+                    <div>
+                      <label class="font-semibold text-gray-700 block mb-1">Supervisor</label>
+                      <input type="text" name="supervisor" required class="w-full p-2 border rounded-md">
+                   </div>
+                   <div class="grid grid-cols-2 gap-4">
+                      <div>
+                          <label class="font-semibold text-gray-700 block mb-1">Fecha Límite</label>
+                          <input type="date" name="fechaLimite" [value]="formatDate(newEventDate())" required class="w-full p-2 border rounded-md">
+                      </div>
+                      <div>
+                          <label class="font-semibold text-gray-700 block mb-1">Hora</label>
+                          <input type="time" name="time" value="10:00" required class="w-full p-2 border rounded-md">
+                      </div>
+                   </div>
+                </div>
+                 <div class="px-6 py-4 bg-gray-100 flex justify-end">
+                    <button type="submit" class="px-6 py-2 bg-[--color-primary-medium] text-white rounded-lg hover:bg-[--color-primary-dark] font-semibold">
+                      Guardar Tarea
+                    </button>
+                </div>
+             </form>
+          </div>
+        </div>
+      }
 
       <!-- Modal Formulario de Cumplimiento -->
       @if (isComplianceModalOpen()) {
@@ -860,29 +994,51 @@ export class App {
   // --- STATE MANAGEMENT WITH SIGNALS ---
   
   activeView = signal<View>('calendar');
-  complianceSubView = signal<ComplianceSubView>('configuracion');
+  calendarView = signal<CalendarView>('month');
+  complianceModuleView = signal<ComplianceModuleView>('normograma');
+  isComplianceDetailView = signal(false);
   normogramaSubView = signal<NormogramaSubView>('grilla');
-  currentDate = signal(new Date());
-  selectedDate = signal(new Date());
+  currentDate = signal(new Date(2025, 3, 1));
+  selectedDate = signal(new Date(2025, 3, 1));
   isComplianceModalOpen = signal(false);
   isUserMenuOpen = signal(false);
   isConfigMenuOpen = signal(false);
   isParametroGeneralMenuOpen = signal(false);
   isNormogramaModalOpen = signal(false);
   isReportModalOpen = signal(false);
+  isFilterPanelOpen = signal(false);
+  isDatePickerOpen = signal(false);
+  datePickerDate = signal(new Date(2025, 3, 1));
+  selectedEvent = signal<CalendarEvent | null>(null);
+  isAddEventModalOpen = signal(false);
+  newEventDate = signal<Date | null>(null);
+  isUpdatesMenuOpen = signal(false);
+
   editingNormogramaItem = signal<Partial<NormogramaItem> | null>(null);
   normogramaSearchQuery = signal('');
   normogramaSearchResults = signal<NormogramaItem[] | null>(null);
 
-  // --- Estado para el tema ---
-  activeTheme = signal<Theme>('blue');
+  // --- Theme State ---
+  activeTheme = signal<Theme>('indigo');
   isThemeMenuOpen = signal(false);
 
   mockEvents = signal<Map<string, CalendarEvent[]>>(new Map([
-    [this.getDateKey(new Date()), [{ title: 'Reunión de equipo', time: '10:00', color: 'blue' }]],
-    [this.getDateKey(new Date(new Date().setDate(new Date().getDate() + 2))), [{ title: 'Entrega GCI 3.0', time: '15:00', color: 'green' }]],
-    [this.getDateKey(new Date(new Date().setDate(new Date().getDate() - 5))), [{ title: 'Revisión Sprint', time: '09:00', color: 'yellow' }]],
+    ['2025-04-02', [{ title: 'Reporte SARLAFT', time: '10:00', color: 'blue', status: 'Vencido', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '02 ABRIL 2025' }]],
+    ['2025-04-03', [{ title: 'Auditoría Interna', time: '15:00', color: 'green', status: 'Vencido', type: 'NORMOGRAMA', responsable: 'Liliana Quiroga', supervisor: 'Implementador SD1', fechaLimite: '03 ABRIL 2025' }]],
+    ['2025-04-04', [{ title: 'Capacitación GCI', time: '09:00', color: 'yellow', status: 'Finalizado', type: 'TAREA CUMPLIMIENTO', responsable: 'Camila Cuervo', supervisor: 'Implementador SD1', fechaLimite: '04 ABRIL 2025' }]],
+    ['2025-04-07', [{ title: 'Entrega Informe', time: '17:00', color: 'yellow', status: 'Finalizado', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '07 ABRIL 2025' }]],
+    ['2025-04-08', [{ title: 'Revisión Contratos', time: '09:00', color: 'blue', status: 'Vencido', type: 'NORMOGRAMA', responsable: 'Mario Chavarro', supervisor: 'Implementador SD1', fechaLimite: '08 ABRIL 2025' }]],
+    ['2025-04-16', [
+      { title: 'Plan de Mejora', time: '11:00', color: 'yellow', status: 'Pendiente', type: 'TAREA CUMPLIMIENTO', responsable: 'Camila Cuervo', supervisor: 'Implementador SD1', fechaLimite: '16 ABRIL 2025' },
+      { title: 'Verificación', time: '14:00', color: 'green', status: 'Finalizado', type: 'NORMOGRAMA', responsable: 'Liliana Quiroga', supervisor: 'Implementador SD1', fechaLimite: '16 ABRIL 2025' }
+    ]],
+     ['2025-04-10', [
+        { title: 'Normativa Legal 2025', time: '11:00', color: 'yellow', status: 'Pendiente', type: 'NORMOGRAMA', responsable: 'Mario Chavarro', supervisor: 'Implementador SD1', fechaLimite: '10 ABRIL 2025' },
+        { title: 'Cumplimiento Regular', time: '14:00', color: 'green', status: 'Finalizado', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '10 ABRIL 2025' }
+     ]],
   ]));
+
+  activeFilters = signal({ status: '', responsable: '', keyword: '' });
 
   // --- Datos y estado para Cumplimiento ---
   complianceData = signal<ComplianceConfig[]>([
@@ -935,18 +1091,85 @@ export class App {
 
 
   weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
   // --- COMPUTED SIGNALS ---
   monthYear = computed(() => this.currentDate().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }));
+  
+  filteredEvents = computed(() => {
+    const events = this.mockEvents();
+    const filters = this.activeFilters();
+    if (!filters.status && !filters.responsable && !filters.keyword) {
+      return events;
+    }
+
+    const newEventsMap = new Map<string, CalendarEvent[]>();
+    events.forEach((dateEvents, dateKey) => {
+      const filtered = dateEvents.filter(event => {
+        const statusMatch = !filters.status || event.status === filters.status;
+        const responsableMatch = !filters.responsable || event.responsable.toLowerCase().includes(filters.responsable.toLowerCase());
+        const keywordMatch = !filters.keyword || event.title.toLowerCase().includes(filters.keyword.toLowerCase());
+        return statusMatch && responsableMatch && keywordMatch;
+      });
+
+      if (filtered.length > 0) {
+        newEventsMap.set(dateKey, filtered);
+      }
+    });
+    return newEventsMap;
+  });
+  
   calendarDays = computed(() => {
     const date = this.currentDate(); const year = date.getFullYear(); const month = date.getMonth();
     const firstDayOfMonth = new Date(year, month, 1); const lastDayOfMonth = new Date(year, month + 1, 0);
     const days = []; const today = new Date();
-    for (let i = 0; i < firstDayOfMonth.getDay(); i++) { const prevMonthDay = new Date(year, month, 0); prevMonthDay.setDate(prevMonthDay.getDate() - i); days.unshift({ day: prevMonthDay.getDate(), isCurrentMonth: false, fullDate: prevMonthDay, events: [], isToday: false, isSelected: false }); }
-    for (let i = 1; i <= lastDayOfMonth.getDate(); i++) { const dayDate = new Date(year, month, i); const dateKey = this.getDateKey(dayDate); days.push({ day: i, isCurrentMonth: true, fullDate: dayDate, events: this.mockEvents().get(dateKey) || [], isToday: dateKey === this.getDateKey(today), isSelected: dateKey === this.getDateKey(this.selectedDate()) }); }
-    const remainingSlots = 42 - days.length;
-    for (let i = 1; i <= remainingSlots; i++) { const nextMonthDay = new Date(year, month + 1, i); days.push({ day: i, isCurrentMonth: false, fullDate: nextMonthDay, events: [], isToday: false, isSelected: false }); }
+    // Días del mes anterior
+    const startDayOfWeek = firstDayOfMonth.getDay();
+    const prevLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+        const dayDate = new Date(year, month - 1, prevLastDay - i);
+        days.push({ day: prevLastDay - i, isCurrentMonth: false, fullDate: dayDate, events: this.filteredEvents().get(this.getDateKey(dayDate)) || [], isToday: false, isSelected: false });
+    }
+
+    // Días del mes actual
+    for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+        const dayDate = new Date(year, month, i);
+        const dateKey = this.getDateKey(dayDate);
+        days.push({ day: i, isCurrentMonth: true, fullDate: dayDate, events: this.filteredEvents().get(dateKey) || [], isToday: dateKey === this.getDateKey(today), isSelected: dateKey === this.getDateKey(this.selectedDate()) });
+    }
+
+    // Días del mes siguiente
+    let nextMonthDayCounter = 1;
+    while(days.length < 42) { // Asegurar 6 filas
+       const dayDate = new Date(year, month + 1, nextMonthDayCounter);
+       days.push({ day: nextMonthDayCounter, isCurrentMonth: false, fullDate: dayDate, events: this.filteredEvents().get(this.getDateKey(dayDate)) || [], isToday: false, isSelected: false });
+       nextMonthDayCounter++;
+    }
+
     return days;
+  });
+
+  weekData = computed(() => {
+    const startOfWeek = new Date(this.selectedDate());
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const week = [];
+    for(let i=0; i<7; i++){
+      const day = new Date(startOfWeek);
+      day.setDate(day.getDate() + i);
+      const dateKey = this.getDateKey(day);
+      week.push({
+        fullDate: day,
+        dayName: day.toLocaleDateString('es-ES', {weekday: 'short'}),
+        dayNumber: day.getDate(),
+        events: this.filteredEvents().get(dateKey) || []
+      })
+    }
+    return week;
+  });
+  
+  dayData = computed(() => {
+      const dateKey = this.getDateKey(this.selectedDate());
+      return this.filteredEvents().get(dateKey) || [];
   });
 
   isAllComplianceSelected = computed(() => {
@@ -997,36 +1220,190 @@ export class App {
   // --- VIEW & MODAL METHODS ---
   setView(view: View) { 
     this.activeView.set(view);
-    if(view === 'normograma') {
-      this.normogramaSubView.set('grilla');
+    if (view === 'cumplimiento') {
+      this.isComplianceDetailView.set(false);
+      this.complianceModuleView.set('normograma');
     }
   }
+  setCalendarView(view: CalendarView) {
+    this.calendarView.set(view);
+  }
+  
   toggleUserMenu() { 
     this.isUserMenuOpen.update(v => !v); 
-    if (this.isUserMenuOpen()) this.isConfigMenuOpen.set(false);
-  }
-  toggleConfigMenu() { 
-    this.isConfigMenuOpen.update(v => !v); 
-    if (this.isConfigMenuOpen()) this.isUserMenuOpen.set(false);
-  }
-  setComplianceSubView(subView: ComplianceSubView) { this.complianceSubView.set(subView); }
-  setNormogramaSubView(subView: NormogramaSubView) { 
-    this.normogramaSubView.set(subView);
-    if(subView === 'busqueda') {
-      this.clearNormogramaSearch();
+    if (this.isUserMenuOpen()) {
+        this.isThemeMenuOpen.set(false);
+        this.isFilterPanelOpen.set(false);
+        this.isUpdatesMenuOpen.set(false);
     }
-  }
-
-  // --- Métodos para el tema ---
-  setTheme(theme: Theme) {
-    this.activeTheme.set(theme);
-    this.isThemeMenuOpen.set(false);
   }
   
   toggleThemeMenu() {
     this.isThemeMenuOpen.update(v => !v);
+    if(this.isThemeMenuOpen()){
+        this.isUserMenuOpen.set(false);
+        this.isFilterPanelOpen.set(false);
+        this.isUpdatesMenuOpen.set(false);
+    }
+  }
+  
+  toggleFilterPanel() {
+      this.isFilterPanelOpen.update(v => !v);
+      if(this.isFilterPanelOpen()){
+        this.isUserMenuOpen.set(false);
+        this.isThemeMenuOpen.set(false);
+        this.isUpdatesMenuOpen.set(false);
+    }
   }
 
+  toggleUpdatesMenu() {
+    this.isUpdatesMenuOpen.update(v => !v);
+    if(this.isUpdatesMenuOpen()){
+        this.isUserMenuOpen.set(false);
+        this.isFilterPanelOpen.set(false);
+        this.isThemeMenuOpen.set(false);
+    }
+  }
+
+  toggleDatePicker() {
+    this.isDatePickerOpen.update(v => !v);
+  }
+
+  changeDatePickerYear(offset: number){
+    this.datePickerDate.update(d => {
+      const newDate = new Date(d);
+      newDate.setFullYear(newDate.getFullYear() + offset);
+      return newDate;
+    })
+  }
+
+  selectMonth(monthIndex: number) {
+    this.currentDate.update(d => {
+      const newDate = new Date(this.datePickerDate());
+      newDate.setMonth(monthIndex, 1);
+      return newDate;
+    });
+    this.datePickerDate.set(this.currentDate());
+    this.isDatePickerOpen.set(false);
+  }
+
+  openEventDetails(event: CalendarEvent) {
+    this.selectedEvent.set(event);
+  }
+
+  closeEventDetails() {
+    this.selectedEvent.set(null);
+  }
+
+  handleDayClick(day: { fullDate: Date }, event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (target.closest('.event-item')) {
+      return;
+    }
+    this.openAddEventModal(day.fullDate);
+  }
+
+  openAddEventModal(date: Date) {
+    this.newEventDate.set(date);
+    this.isAddEventModalOpen.set(true);
+  }
+
+  closeAddEventModal() {
+    this.isAddEventModalOpen.set(false);
+  }
+
+  saveNewEvent(form: HTMLFormElement) {
+    const formData = new FormData(form);
+    const date = this.newEventDate();
+    if (!date) return;
+
+    const newEvent: CalendarEvent = {
+      title: formData.get('title') as string,
+      status: formData.get('status') as 'Pendiente' | 'Finalizado' | 'Vencido',
+      type: formData.get('type') as string,
+      responsable: formData.get('responsable') as string,
+      supervisor: formData.get('supervisor') as string,
+      fechaLimite: new Date(formData.get('fechaLimite') as string).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase(),
+      time: formData.get('time') as string,
+      color: 'blue'
+    };
+
+    const dateKey = this.getDateKey(date);
+    this.mockEvents.update(events => {
+      const newMap = new Map(events);
+      const dayEvents = newMap.get(dateKey) || [];
+      dayEvents.push(newEvent);
+      newMap.set(dateKey, dayEvents);
+      return newMap;
+    });
+
+    this.closeAddEventModal();
+  }
+  
+  applyFilters(form: HTMLFormElement) {
+      const formData = new FormData(form);
+      this.activeFilters.set({
+          status: formData.get('status') as string,
+          responsable: formData.get('responsable') as string,
+          keyword: formData.get('keyword') as string
+      });
+      this.isFilterPanelOpen.set(false);
+  }
+
+  resetFilters(form: HTMLFormElement) {
+      form.reset();
+      this.activeFilters.set({ status: '', responsable: '', keyword: '' });
+  }
+
+  formatDate(date: Date | null): string {
+    if (!date) return '';
+    return date.toISOString().split('T')[0];
+  }
+  
+  setComplianceModuleView(module: ComplianceModuleView) { 
+    this.complianceModuleView.set(module); 
+    this.isComplianceDetailView.set(false);
+  }
+  setNormogramaSubView(subView: NormogramaSubView) { 
+    this.normogramaSubView.set(subView);
+  }
+
+  editSelectedComplianceOperation() {
+    const selectedIds = this.selectedComplianceOperationIds();
+    if (selectedIds.size !== 1) {
+      return;
+    }
+    const id = selectedIds.values().next().value;
+    const itemToEdit = this.complianceOperationData().find(item => item.id === id);
+
+    if (itemToEdit) {
+      this.cumplimientoDetailData.update(currentDetails => ({
+        ...currentDetails,
+        codigo: itemToEdit.codigo,
+        nombre: itemToEdit.cumplimiento,
+        descripcion: itemToEdit.descripcion,
+        tipo: itemToEdit.tipo,
+        fechaCreacion: itemToEdit.fechaCreacion,
+        unidadOrganizacional: itemToEdit.unidadOrganizativa,
+        tituloNormograma: '', 
+        numeroLey: ''
+      }));
+      
+      this.selectedComplianceOperationIds.set(new Set());
+      this.isComplianceDetailView.set(true);
+    }
+  }
+
+  goBackToComplianceList(){
+    this.isComplianceDetailView.set(false);
+    this.complianceModuleView.set('operacion');
+  }
+
+  // --- Theme Methods ---
+  setTheme(theme: Theme) {
+    this.activeTheme.set(theme);
+    this.isThemeMenuOpen.set(false);
+  }
 
   openComplianceModal(item?: ComplianceConfig | null) {
     this.editingComplianceItem.set(item ? { ...item } : {id: 0, codigo: 0, nombre: '', descripcion: '', abreviacion: ''});
@@ -1103,7 +1480,7 @@ export class App {
         interesados: formData.has('interesados'),
         unidadOrganizacionalInteresada: formData.has('unidadOrganizacionalInteresada'),
         requerimientoEnteExterno: formData.has('requerimientoEnteExterno'),
-        responsableAdicional: '', // Campo no presente en el form actual
+        responsableAdicional: '',
         repetir: formData.get('repetir') as string,
         repetirCada: +(formData.get('repetirCada') || 1),
         fechaInicial: formData.get('fechaInicial') as string,
@@ -1119,7 +1496,7 @@ export class App {
         ));
     } else { // Insert
         const newId = Math.max(...this.complianceReportsData().map(i => i.id), 0) + 1;
-        const newCodigo = newId; // Simple codigo assignment
+        const newCodigo = newId;
         const newItem: ComplianceReport = { ...itemData, id: newId, codigo: newCodigo };
         this.complianceReportsData.update(data => [...data, newItem]);
     }
@@ -1309,9 +1686,25 @@ export class App {
 
 
   // --- CALENDAR METHODS ---
-  changeMonth(offset: number) { this.currentDate.update(d => { const newDate = new Date(d); newDate.setMonth(newDate.getMonth() + offset); return newDate; }); }
-  goToToday() { this.currentDate.set(new Date()); this.selectedDate.set(new Date()); }
-  selectDate(date: Date) { this.selectedDate.set(date); }
+  changeMonth(offset: number) { 
+    this.currentDate.update(d => { 
+      const newDate = new Date(d); 
+      newDate.setMonth(newDate.getMonth() + offset, 1);
+      this.datePickerDate.set(newDate);
+      this.selectedDate.set(newDate);
+      return newDate; 
+    }); 
+  }
+  goToToday() { 
+    const today = new Date();
+    this.currentDate.set(today); 
+    this.selectedDate.set(today); 
+    this.datePickerDate.set(today);
+  }
+  selectDate(date: Date) { 
+    this.selectedDate.set(date); 
+    this.calendarView.set('day');
+  }
   private getDateKey(date: Date): string { return date.toISOString().split('T')[0]; }
 }
 
