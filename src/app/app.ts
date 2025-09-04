@@ -11,6 +11,11 @@ interface CalendarEvent {
   responsable: string;
   supervisor: string;
   fechaLimite: string;
+  // Propiedades para el layout
+  top?: number;
+  left?: number;
+  width?: number;
+  zIndex?: number;
 }
 
 interface ComplianceConfig {
@@ -97,7 +102,7 @@ interface NormogramaItem {
 }
 
 // --- TIPOS DE VISTA Y TEMA ---
-type View = 'calendar' | 'cumplimiento';
+type View = 'calendar' | 'cumplimiento' | 'workflow';
 type CalendarView = 'day' | 'week' | 'month';
 type ComplianceModuleView = 'normograma' | 'tipo' | 'operacion' | 'informes';
 type NormogramaSubView = 'grilla' | 'busqueda';
@@ -131,7 +136,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
       --color-primary-dark: #3E2B7A;  /* Morado oscuro para encabezados */
       --color-primary-darker: #2D1E59;/* Morado aún más oscuro para hover/activo */
     }
-    .theme-slate {
+      .theme-slate {
       --color-primary-light: #F1F5F9; /* slate-100 */
       --color-primary-text: #475569;  /* slate-600 */
       --color-primary-medium: #64748B;/* slate-500 */
@@ -168,6 +173,11 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             CUMPLIMIENTO
           </a>
+          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('workflow')"
+              [ngClass]="{'bg-white/20 font-semibold text-white': activeView() === 'workflow', 'hover:bg-white/10 hover:text-white': activeView() !== 'workflow'}">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            WORK FLOW
+          </a>
         </nav>
       </aside>
 
@@ -176,7 +186,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         <!-- Header Superior (Estilo Prototipo) -->
         <header class="h-20 bg-white border-b flex items-center justify-between px-8">
             <div>
-                <p class="text-sm text-gray-500">Inicio > Calendario</p>
+                <p class="text-sm text-gray-500">{{ headerBreadcrumb() }}</p>
                 <h2 class="text-2xl font-bold text-gray-800">HOLA, Camila !</h2>
             </div>
             <div class="flex items-center space-x-4">
@@ -187,7 +197,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                     @if(isFilterPanelOpen()) {
                     <div class="absolute right-0 mt-2 w-80 bg-white p-6 rounded-lg shadow-lg border text-sm z-30">
                         <h3 class="font-bold text-lg mb-4 text-gray-800">Filtros</h3>
-                        <form #filterForm (submit)="applyFilters(filterForm)">
+                        <form #filterForm (submit)="applyFilters($event, filterForm)">
                             <div class="space-y-4">
                                 <div>
                                     <label class="font-semibold text-gray-600 block mb-1">Estado de la tarea</label>
@@ -268,9 +278,9 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                      @if (isUserMenuOpen()) {
                         <div class="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border text-gray-800 z-30">
                           <div class="p-4 border-b">
-                            <p><span class="font-semibold text-sm">Cargo:</span> <span class="text-sm">Analista</span></p>
-                            <p><span class="font-semibold text-sm">Unidad:</span> <span class="text-sm">Cumplimiento</span></p>
-                            <p><span class="font-semibold text-sm">Perfil:</span> <span class="text-sm">Operativo</span></p>
+                            <p><span class="font-semibold text-sm">Cargo: </span> <span class="text-sm">Analista</span></p>
+                            <p><span class="font-semibold text-sm">Unidad: </span> <span class="text-sm">Cumplimiento</span></p>
+                            <p><span class="font-semibold text-sm">Perfil: </span> <span class="text-sm">Operativo</span></p>
                           </div>
                           <div class="p-2 text-sm flex justify-center">
                               <a href="#" class="p-2 rounded-full hover:bg-red-100 text-red-500" title="Salir del sistema">
@@ -289,16 +299,16 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         <main class="flex-1 overflow-y-auto">
           @switch (activeView()) {
             @case ('calendar') {
-              <div class="p-8 flex flex-1 h-full">
+             <div class="p-8 flex flex-1 h-full">
                 <!-- Calendario -->
                 <div class="flex-1 flex flex-col bg-white rounded-lg shadow-sm border">
                   <div class="flex items-center justify-between p-4 border-b">
                     <div class="flex items-center space-x-4">
                       <button (click)="goToToday()" class="px-4 py-1.5 text-sm font-semibold text-gray-700 bg-gray-200 border rounded-md hover:bg-gray-300">Hoy</button>
                        <div class="relative flex items-center space-x-2">
-                          <button (click)="changeMonth(-1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
-                            <button (click)="toggleDatePicker()" class="text-lg font-bold text-gray-800 uppercase tracking-wider">{{ monthYear() }}</button>
-                          <button (click)="changeMonth(1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
+                          <button (click)="navigateCalendar(-1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
+                            <button (click)="toggleDatePicker()" class="text-lg font-bold text-gray-800 uppercase tracking-wider">{{ calendarHeaderTitle() }}</button>
+                          <button (click)="navigateCalendar(1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
                           @if(isDatePickerOpen()){
                             <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-lg shadow-lg border z-20 p-4">
                                <div class="flex items-center justify-between mb-2">
@@ -327,11 +337,17 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                       <div class="grid grid-cols-7 flex-1">
                         @for(day of weekDays; track day) {<div class="py-3 text-center text-sm font-semibold text-gray-500 border-b border-r">{{ day }}</div>}
                         @for(day of calendarDays(); track day.fullDate) {
-                          <div (click)="handleDayClick(day, $event)" class="p-2 border-b border-r flex flex-col min-h-[120px] cursor-pointer" [class.bg-gray-50]="!day.isCurrentMonth">
+                          <div (click)="handleDayClick(day, $event)" class="p-2 border-b border-r flex flex-col min-h-[120px] cursor-pointer relative" [class.bg-gray-50]="!day.isCurrentMonth">
                             <span class="text-sm font-medium self-end" [ngClass]="{'text-gray-400': !day.isCurrentMonth, 'text-white bg-[--color-primary-text]': day.isToday, 'rounded-full w-7 h-7 flex items-center justify-center': day.isToday}">{{ day.day }}</span>
                             <div class="mt-1 space-y-1 text-xs event-container">
                               @for(event of day.events; track event.title) {
-                                <div (click)="openEventDetails(event)" class="p-1 rounded-md event-item" [ngClass]="{
+                                <div (click)="openEventDetails(event, $event)" 
+                                     class="p-1 rounded-md event-item absolute" 
+                                     [style.top.px]="event.top"
+                                     [style.left.px]="event.left"
+                                     [style.width.px]="event.width"
+                                     [style.zIndex]="event.zIndex"
+                                     [ngClass]="{
                                   'bg-red-100 text-red-800': event.status === 'Vencido',
                                   'bg-green-100 text-green-800': event.status === 'Finalizado',
                                   'bg-amber-100 text-amber-800': event.status === 'Pendiente'
@@ -355,7 +371,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                         @for(day of weekData(); track day.fullDate){
                           <div class="border-b border-r p-2 min-h-[400px]">
                              @for(event of day.events; track event.title) {
-                                <div (click)="openEventDetails(event)" class="p-2 mt-1 rounded-md cursor-pointer" [ngClass]="{
+                                <div (click)="openEventDetails(event, $event)" class="p-2 mt-1 rounded-md cursor-pointer" [ngClass]="{
                                   'bg-red-100 text-red-800': event.status === 'Vencido',
                                   'bg-green-100 text-green-800': event.status === 'Finalizado',
                                   'bg-amber-100 text-amber-800': event.status === 'Pendiente'
@@ -369,26 +385,32 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                       </div>
                     }
                      @case('day'){
-                        <div class="p-4 overflow-y-auto">
-                           <h3 class="text-lg font-bold text-gray-800 mb-4">{{selectedDate().toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'})}}</h3>
-                           <div class="space-y-4">
-                              @for(event of dayData(); track event.title){
-                                 <div (click)="openEventDetails(event)" class="p-3 rounded-lg cursor-pointer flex items-start space-x-4" [ngClass]="{
-                                  'bg-red-50 border-l-4 border-red-500': event.status === 'Vencido',
-                                  'bg-green-50 border-l-4 border-green-500': event.status === 'Finalizado',
-                                  'bg-amber-50 border-l-4 border-amber-500': event.status === 'Pendiente'
-                                }">
-                                  <div class="w-20 text-sm font-semibold text-gray-600">{{event.time}}</div>
-                                  <div>
-                                    <p class="font-bold text-gray-800">{{event.title}}</p>
-                                    <p class="text-sm text-gray-500">{{event.type}}</p>
-                                  </div>
-                                </div>
-                              }
-                              @empty {
-                                <div class="text-center py-10 text-gray-500">No hay eventos para este día.</div>
-                              }
-                           </div>
+                        <div (click)="openAddEventModal(selectedDate())" class="p-4 overflow-y-auto h-full cursor-pointer">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">{{selectedDate().toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'})}}</h3>
+                            <div class="space-y-4">
+                                @for(event of dayData(); track event.title){
+                                   <div (click)="openEventDetails(event, $event)" class="p-3 rounded-lg cursor-pointer flex items-start space-x-4" [ngClass]="{
+                                    'bg-red-50 border-l-4 border-red-500': event.status === 'Vencido',
+                                    'bg-green-50 border-l-4 border-green-500': event.status === 'Finalizado',
+                                    'bg-amber-50 border-l-4 border-amber-500': event.status === 'Pendiente'
+                                   }">
+                                     <div class="w-20 text-sm font-semibold text-gray-600">{{event.time}}</div>
+                                     <div>
+                                       <p class="font-bold text-gray-800">{{event.title}}</p>
+                                       <p class="text-sm text-gray-500">{{event.type}}</p>
+                                     </div>
+                                   </div>
+                                }
+                                @empty {
+                                   <div class="text-center py-10 text-gray-500 flex flex-col items-center justify-center h-full">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <p>No hay eventos para este día.</p>
+                                        <p class="text-sm text-gray-400">Haz clic aquí para agregar una nueva tarea.</p>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     }
                   }
@@ -577,6 +599,10 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                 </div>
                                 }
                                 @if (normogramaSubView() === 'busqueda') {
+                                <button (click)="setNormogramaSubView('grilla')" class="self-start mb-4 flex items-center text-sm text-[--color-primary-text] hover:underline">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                  Volver a Normograma
+                                </button>
                                 <div class="flex-grow flex flex-col text-sm">
                                     <!-- Search Box Section -->
                                         <div class="bg-gray-200 p-4 border-b">
@@ -639,10 +665,10 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                             </div>
                         }
                         @case('tipo'){
-                           <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md"><div class="flex items-center space-x-2 p-3 bg-gray-50 border-b"><button (click)="openComplianceModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button><button (click)="openComplianceModal(selectedComplianceItem())" [disabled]="selectedComplianceIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button><button (click)="deleteSelectedComplianceItems()" [disabled]="selectedComplianceIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button><button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button></div><div class="overflow-y-auto flex-grow"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceSelected()" (change)="toggleSelectAllCompliance($event)"></th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Abreviación</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">@for (item of complianceData(); track item.id) {<tr class="hover:bg-gray-50"><td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceIds().has(item.id)" (change)="toggleSelectComplianceItem(item.id)"></td><td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td><td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.nombre }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.abreviacion }}</td></tr>} @empty {<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay datos de configuración.</td></tr>}</tbody></table></div></div>
+                            <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md"><div class="flex items-center space-x-2 p-3 bg-gray-50 border-b"><button (click)="openComplianceModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button><button (click)="openComplianceModal(selectedComplianceItem())" [disabled]="selectedComplianceIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button><button (click)="deleteSelectedComplianceItems()" [disabled]="selectedComplianceIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button><button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button></div><div class="overflow-y-auto flex-grow"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceSelected()" (change)="toggleSelectAllCompliance($event)"></th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Abreviación</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">@for (item of complianceData(); track item.id) {<tr class="hover:bg-gray-50"><td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceIds().has(item.id)" (change)="toggleSelectComplianceItem(item.id)"></td><td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td><td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.nombre }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.abreviacion }}</td></tr>} @empty {<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay datos de configuración.</td></tr>}</tbody></table></div></div>
                         }
                         @case('operacion'){
-                          <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md">
+                           <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md">
                               <!-- Toolbar -->
                               <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
                                   <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
@@ -699,7 +725,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
       </div>
 
        <!-- Modal de Detalles del Evento -->
-      @if(selectedEvent()){
+       @if(selectedEvent()){
         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
             <header class="p-4 border-b flex justify-between items-center">
@@ -724,14 +750,14 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
       }
 
       <!-- Modal para Agregar Evento -->
-       @if(isAddEventModalOpen()){
+      @if(isAddEventModalOpen()){
         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
             <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg flex justify-between items-center">
                <h3 class="text-lg font-semibold">Crear Nueva Tarea</h3>
                 <button (click)="closeAddEventModal()" class="text-white hover:text-gray-200">&times;</button>
              </header>
-             <form #addEventForm (submit)="saveNewEvent(addEventForm)">
+             <form #addEventForm (submit)="saveNewEvent($event, addEventForm)">
                 <div class="p-6 bg-gray-50 space-y-4 text-sm">
                    <div>
                       <label class="font-semibold text-gray-700 block mb-1">Título de la Tarea</label>
@@ -783,7 +809,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         </div>
       }
 
-      <!-- Modal Formulario de Cumplimiento -->
+        <!-- Modal Formulario de Cumplimiento -->
       @if (isComplianceModalOpen()) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
@@ -812,8 +838,9 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
       @if (isNormogramaModalOpen()) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl">
-            <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg">
+            <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg flex justify-between items-center">
               <h3 class="text-lg font-semibold">{{ editingNormogramaItem()?.id ? 'Modificar' : 'Insertar' }} Normograma</h3>
+              <button (click)="closeNormogramaModal()" class="text-white hover:text-gray-200 text-2xl">&times;</button>
             </header>
             <form (submit)="saveNormogramaItem($event)" class="p-6 max-h-[80vh] overflow-y-auto">
               @if(editingNormogramaItem(); as currentItem) {
@@ -1023,14 +1050,18 @@ export class App {
   isThemeMenuOpen = signal(false);
 
   mockEvents = signal<Map<string, CalendarEvent[]>>(new Map([
-    ['2025-04-02', [{ title: 'Reporte SARLAFT', time: '10:00', color: 'blue', status: 'Vencido', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '02 ABRIL 2025' }]],
+    ['2025-04-02', [
+      { title: 'Reporte SARLAFT', time: '10:00', color: 'blue', status: 'Vencido', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '02 ABRIL 2025' },
+      { title: 'Revisión SARLAFT', time: '12:00', color: 'blue', status: 'Vencido', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '02 ABRIL 2025' }
+    ]],
     ['2025-04-03', [{ title: 'Auditoría Interna', time: '15:00', color: 'green', status: 'Vencido', type: 'NORMOGRAMA', responsable: 'Liliana Quiroga', supervisor: 'Implementador SD1', fechaLimite: '03 ABRIL 2025' }]],
     ['2025-04-04', [{ title: 'Capacitación GCI', time: '09:00', color: 'yellow', status: 'Finalizado', type: 'TAREA CUMPLIMIENTO', responsable: 'Camila Cuervo', supervisor: 'Implementador SD1', fechaLimite: '04 ABRIL 2025' }]],
     ['2025-04-07', [{ title: 'Entrega Informe', time: '17:00', color: 'yellow', status: 'Finalizado', type: 'TAREA CUMPLIMIENTO', responsable: 'Jhon Chavarro', supervisor: 'Implementador SD1', fechaLimite: '07 ABRIL 2025' }]],
     ['2025-04-08', [{ title: 'Revisión Contratos', time: '09:00', color: 'blue', status: 'Vencido', type: 'NORMOGRAMA', responsable: 'Mario Chavarro', supervisor: 'Implementador SD1', fechaLimite: '08 ABRIL 2025' }]],
     ['2025-04-16', [
       { title: 'Plan de Mejora', time: '11:00', color: 'yellow', status: 'Pendiente', type: 'TAREA CUMPLIMIENTO', responsable: 'Camila Cuervo', supervisor: 'Implementador SD1', fechaLimite: '16 ABRIL 2025' },
-      { title: 'Verificación', time: '14:00', color: 'green', status: 'Finalizado', type: 'NORMOGRAMA', responsable: 'Liliana Quiroga', supervisor: 'Implementador SD1', fechaLimite: '16 ABRIL 2025' }
+      { title: 'Verificación', time: '14:00', color: 'green', status: 'Finalizado', type: 'NORMOGRAMA', responsable: 'Liliana Quiroga', supervisor: 'Implementador SD1', fechaLimite: '16 ABRIL 2025' },
+      { title: 'Reunión de Cierre', time: '16:00', color: 'blue', status: 'Pendiente', type: 'TAREA CUMPLIMIENTO', responsable: 'Camila Cuervo', supervisor: 'Implementador SD1', fechaLimite: '16 ABRIL 2025' }
     ]],
      ['2025-04-10', [
         { title: 'Normativa Legal 2025', time: '11:00', color: 'yellow', status: 'Pendiente', type: 'NORMOGRAMA', responsable: 'Mario Chavarro', supervisor: 'Implementador SD1', fechaLimite: '10 ABRIL 2025' },
@@ -1089,7 +1120,7 @@ export class App {
   ]);
   selectedNormogramaIds = signal<Set<number>>(new Set());
 
-
+  
   weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -1123,26 +1154,27 @@ export class App {
     const date = this.currentDate(); const year = date.getFullYear(); const month = date.getMonth();
     const firstDayOfMonth = new Date(year, month, 1); const lastDayOfMonth = new Date(year, month + 1, 0);
     const days = []; const today = new Date();
+    const getDateKey = this.getDateKey;
     // Días del mes anterior
     const startDayOfWeek = firstDayOfMonth.getDay();
     const prevLastDay = new Date(year, month, 0).getDate();
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
         const dayDate = new Date(year, month - 1, prevLastDay - i);
-        days.push({ day: prevLastDay - i, isCurrentMonth: false, fullDate: dayDate, events: this.filteredEvents().get(this.getDateKey(dayDate)) || [], isToday: false, isSelected: false });
+        days.push({ day: prevLastDay - i, isCurrentMonth: false, fullDate: dayDate, events: this.processOverlappingEvents(this.filteredEvents().get(getDateKey(dayDate)) || []), isToday: false, isSelected: false });
     }
 
     // Días del mes actual
     for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
         const dayDate = new Date(year, month, i);
-        const dateKey = this.getDateKey(dayDate);
-        days.push({ day: i, isCurrentMonth: true, fullDate: dayDate, events: this.filteredEvents().get(dateKey) || [], isToday: dateKey === this.getDateKey(today), isSelected: dateKey === this.getDateKey(this.selectedDate()) });
+        const dateKey = getDateKey(dayDate);
+        days.push({ day: i, isCurrentMonth: true, fullDate: dayDate, events: this.processOverlappingEvents(this.filteredEvents().get(dateKey) || []), isToday: dateKey === getDateKey(today), isSelected: dateKey === getDateKey(this.selectedDate()) });
     }
 
     // Días del mes siguiente
     let nextMonthDayCounter = 1;
     while(days.length < 42) { // Asegurar 6 filas
        const dayDate = new Date(year, month + 1, nextMonthDayCounter);
-       days.push({ day: nextMonthDayCounter, isCurrentMonth: false, fullDate: dayDate, events: this.filteredEvents().get(this.getDateKey(dayDate)) || [], isToday: false, isSelected: false });
+       days.push({ day: nextMonthDayCounter, isCurrentMonth: false, fullDate: dayDate, events: this.processOverlappingEvents(this.filteredEvents().get(getDateKey(dayDate)) || []), isToday: false, isSelected: false });
        nextMonthDayCounter++;
     }
 
@@ -1153,10 +1185,11 @@ export class App {
     const startOfWeek = new Date(this.selectedDate());
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const week = [];
+    const getDateKey = this.getDateKey;
     for(let i=0; i<7; i++){
       const day = new Date(startOfWeek);
       day.setDate(day.getDate() + i);
-      const dateKey = this.getDateKey(day);
+      const dateKey = getDateKey(day);
       week.push({
         fullDate: day,
         dayName: day.toLocaleDateString('es-ES', {weekday: 'short'}),
@@ -1215,6 +1248,67 @@ export class App {
     if (selectedIds.size !== 1) return null;
     const id = selectedIds.values().next().value;
     return this.complianceReportsData().find(item => item.id === id) || null;
+  });
+
+  calendarHeaderTitle = computed(() => {
+    const view = this.calendarView();
+    const selDate = this.selectedDate();
+
+    if (view === 'month') {
+      return this.currentDate().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    }
+
+    if (view === 'week') {
+      const week = this.weekData();
+      const start = week[0].fullDate;
+      const end = week[6].fullDate;
+      const startMonth = start.toLocaleDateString('es-ES', { month: 'short' });
+      const endMonth = end.toLocaleDateString('es-ES', { month: 'short' });
+
+      if (start.getMonth() === end.getMonth()) {
+        return `${start.getDate()} - ${end.getDate()} de ${end.toLocaleDateString('es-ES', { month: 'long' })}, ${end.getFullYear()}`;
+      } else {
+        return `${start.getDate()} de ${startMonth} - ${end.getDate()} de ${endMonth}, ${end.getFullYear()}`;
+      }
+    }
+
+    if (view === 'day') {
+      return selDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return ''; // Fallback
+  });
+
+  headerBreadcrumb = computed(() => {
+    const view = this.activeView();
+    if (view === 'calendar') {
+      return 'Inicio > Calendario';
+    }
+    if (view === 'cumplimiento') {
+       if (this.isComplianceDetailView()) {
+         return 'Inicio > Cumplimiento > Detalle de Operación';
+       }
+      const moduleView = this.complianceModuleView();
+      let moduleName = '';
+      switch(moduleView) {
+        case 'normograma':
+          moduleName = 'Normograma';
+          break;
+        case 'tipo':
+          moduleName = 'Tipo Cumplimiento';
+          break;
+        case 'operacion':
+          moduleName = 'Operación de Cumplimiento';
+          break;
+        case 'informes':
+          moduleName = 'Informes';
+          break;
+      }
+      return `Inicio > Cumplimiento > ${moduleName}`;
+    }
+    if (view === 'workflow') {
+      return `Inicio > Cumplimiento > work flow`;
+    }
+    return 'Inicio'; // Fallback
   });
 
   // --- VIEW & MODAL METHODS ---
@@ -1287,7 +1381,8 @@ export class App {
     this.isDatePickerOpen.set(false);
   }
 
-  openEventDetails(event: CalendarEvent) {
+  openEventDetails(event: CalendarEvent, mouseEvent: MouseEvent) {
+    mouseEvent.stopPropagation();
     this.selectedEvent.set(event);
   }
 
@@ -1312,7 +1407,8 @@ export class App {
     this.isAddEventModalOpen.set(false);
   }
 
-  saveNewEvent(form: HTMLFormElement) {
+  saveNewEvent(event: Event, form: HTMLFormElement) {
+    event.preventDefault();
     const formData = new FormData(form);
     const date = this.newEventDate();
     if (!date) return;
@@ -1340,7 +1436,8 @@ export class App {
     this.closeAddEventModal();
   }
   
-  applyFilters(form: HTMLFormElement) {
+  applyFilters(event: Event, form: HTMLFormElement) {
+      event.preventDefault();
       const formData = new FormData(form);
       this.activeFilters.set({
           status: formData.get('status') as string,
@@ -1398,7 +1495,7 @@ export class App {
     this.isComplianceDetailView.set(false);
     this.complianceModuleView.set('operacion');
   }
-
+  
   // --- Theme Methods ---
   setTheme(theme: Theme) {
     this.activeTheme.set(theme);
@@ -1410,7 +1507,7 @@ export class App {
     this.isComplianceModalOpen.set(true);
   }
   closeComplianceModal() { this.isComplianceModalOpen.set(false); }
-  
+
   openReportModal(item?: ComplianceReport | null) {
     const today = new Date().toISOString().split('T')[0];
     this.editingReportItem.set(item ? { ...item } : {
@@ -1686,14 +1783,30 @@ export class App {
 
 
   // --- CALENDAR METHODS ---
-  changeMonth(offset: number) { 
-    this.currentDate.update(d => { 
-      const newDate = new Date(d); 
-      newDate.setMonth(newDate.getMonth() + offset, 1);
-      this.datePickerDate.set(newDate);
-      this.selectedDate.set(newDate);
-      return newDate; 
-    }); 
+  navigateCalendar(offset: number) {
+    const view = this.calendarView();
+    
+    if (view === 'month') {
+        this.currentDate.update(d => { 
+            const newDate = new Date(d); 
+            newDate.setMonth(newDate.getMonth() + offset, 1);
+            this.datePickerDate.set(newDate);
+            this.selectedDate.set(newDate);
+            return newDate; 
+        });
+    } else {
+        const newSelectedDate = new Date(this.selectedDate());
+        if (view === 'week') {
+            newSelectedDate.setDate(newSelectedDate.getDate() + (7 * offset));
+        } else { // day view
+            newSelectedDate.setDate(newSelectedDate.getDate() + (1 * offset));
+        }
+        this.selectedDate.set(newSelectedDate);
+        if (newSelectedDate.getMonth() !== this.currentDate().getMonth() || newSelectedDate.getFullYear() !== this.currentDate().getFullYear()){
+             this.currentDate.set(newSelectedDate);
+             this.datePickerDate.set(newSelectedDate);
+        }
+    }
   }
   goToToday() { 
     const today = new Date();
@@ -1705,6 +1818,29 @@ export class App {
     this.selectedDate.set(date); 
     this.calendarView.set('day');
   }
-  private getDateKey(date: Date): string { return date.toISOString().split('T')[0]; }
+  
+  private processOverlappingEvents(events: CalendarEvent[]): CalendarEvent[] {
+    if (events.length <= 1) {
+      if (events.length === 1) {
+          return events.map(e => ({ ...e, top: 28, left: 4, width: 110, zIndex: 1 }));
+      }
+      return events;
+    }
+  
+    // Simple stacking layout
+    return events.map((event, index) => {
+      const top = 28 + (index * 20); 
+      const left = 4 + (index * 4); 
+      return {
+        ...event,
+        top: top,
+        left: left,
+        width: 110 - (index * 8),
+        zIndex: index + 1
+      };
+    });
+  }
+
+  private getDateKey = (date: Date): string => { return date.toISOString().split('T')[0]; }
 }
 
