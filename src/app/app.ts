@@ -120,13 +120,19 @@ interface Manual {
   uploadDate: string;
 }
 
-
 // --- VIEW AND THEME TYPES ---
 type View = 'calendar' | 'cumplimiento' | 'workflow' | 'editProfile' | 'changePassword' | 'manuals';
 type CalendarView = 'day' | 'week' | 'month';
 type ComplianceModuleView = 'normograma' | 'tipo' | 'operacion' | 'informes';
 type NormogramaSubView = 'grilla' | 'busqueda';
 type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
+
+// +++ Interfaz para el breadcrumb +++
+interface Breadcrumb {
+  label: string;
+  action?: () => void;
+}
+
 
 @Component({
   selector: 'app-root',
@@ -176,24 +182,31 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
     .status-Pendiente { background-color: #F59E0B; } /* amber-500 */
   `],
   template: `
-    <div class="flex h-screen bg-gray-100 font-sans" [ngClass]="'theme-' + activeTheme()">
-      <!-- Left Sidebar (Prototype Style) -->
-      <aside class="w-64 flex-shrink-0 bg-[--color-primary-dark] flex flex-col transition-opacity duration-300" [class.opacity-50]="!isUserLoggedIn()" [class.pointer-events-none]="!isUserLoggedIn()">
+    <div class="relative min-h-screen md:flex" [ngClass]="'theme-' + activeTheme()">
+      @if(isSidebarOpen()){
+        <div (click)="closeSidebar()" class="fixed inset-0 bg-black/60 z-30 md:hidden"></div>
+      }
+
+      <aside class="w-64 flex-shrink-0 bg-[--color-primary-dark] flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 transform md:relative md:translate-x-0"
+             [class.translate-x-0]="isSidebarOpen()"
+             [class.-translate-x-full]="!isSidebarOpen()"
+             [class.pointer-events-none]="!isUserLoggedIn()"
+             [class.opacity-50]="!isUserLoggedIn()">
         <div class="h-20 flex items-center justify-center border-b border-white/10">
           <h1 class="text-2xl font-bold text-white">SOFTWARE GCI</h1>
         </div>
         <nav class="flex-1 px-4 py-6 space-y-2">
-          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('calendar')"
+          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('calendar'); closeSidebar();"
              [ngClass]="{'bg-white/20 font-semibold text-white': activeView() === 'calendar', 'hover:bg-white/10 hover:text-white': activeView() !== 'calendar'}">
              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             HOME
           </a>
-          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('cumplimiento')"
+          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('cumplimiento'); closeSidebar();"
               [ngClass]="{'bg-white/20 font-semibold text-white': activeView() === 'cumplimiento', 'hover:bg-white/10 hover:text-white': activeView() !== 'cumplimiento'}">
              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             CUMPLIMIENTO
           </a>
-          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('workflow')"
+          <a href="#" class="flex items-center px-4 py-2 rounded-lg text-white/80" (click)="setView('workflow'); closeSidebar();"
               [ngClass]="{'bg-white/20 font-semibold text-white': activeView() === 'workflow', 'hover:bg-white/10 hover:text-white': activeView() !== 'workflow'}">
              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             WORK FLOW
@@ -201,34 +214,45 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         </nav>
       </aside>
 
-      <!-- Main Content -->
       <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top Header (Prototype Style) -->
-        <header class="h-20 bg-white border-b flex items-center justify-between px-8">
-            <div>
-              @if(isUserLoggedIn()){
-                <p class="text-sm text-gray-500">{{ headerBreadcrumb() }}</p>
-                <h2 class="text-2xl font-bold text-gray-800">HOLA, {{ userProfile().nombre.split(' ')[0] }} !</h2>
-              } @else {
-                 <h2 class="text-2xl font-bold text-gray-800">Bienvenido</h2>
-              }
+        <header class="h-20 bg-white border-b flex items-center justify-between px-4 sm:px-8 flex-shrink-0">
+            <div class="flex items-center">
+                <button (click)="toggleSidebar()" class="p-2 rounded-md text-gray-500 hover:bg-gray-100 md:hidden mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+                <div>
+                  @if(isUserLoggedIn()){
+                    <div class="text-xs sm:text-sm text-gray-500 flex items-center space-x-1">
+                        @for(crumb of breadcrumbs(); track crumb.label; let isLast = $last) {
+                            @if(!isLast) {
+                                <a href="#" (click)="crumb.action?.(); $event.preventDefault()" class="hover:underline hover:text-[--color-primary-text]">{{ crumb.label }}</a>
+                                <span>&gt;</span>
+                            } @else {
+                                <span class="font-medium text-gray-600">{{ crumb.label }}</span>
+                            }
+                        }
+                    </div>
+                    <h2 class="text-lg sm:text-2xl font-bold text-gray-800">HOLA, {{ userProfile().nombre.split(' ')[0] }} !</h2>
+                  } @else {
+                     <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Bienvenido</h2>
+                  }
+                </div>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-1 sm:space-x-2">
                 @if(isUserLoggedIn()){
-                  <a href="#" (click)="setView('manuals')" class="text-sm p-2 rounded-md flex items-center space-x-1 text-gray-600 font-medium hover:bg-gray-100">
+                  <a href="#" (click)="setView('manuals')" class="text-sm p-2 rounded-md hidden sm:flex items-center space-x-1 text-gray-600 font-medium hover:bg-gray-100">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                      <span>Manuales</span>
+                      <span class="hidden lg:inline">Manuales</span>
                   </a>
-                  <a href="#" class="text-sm p-2 rounded-md flex items-center space-x-1 text-gray-600 font-medium hover:bg-gray-100">
+                  <a href="#" class="text-sm p-2 rounded-md hidden sm:flex items-center space-x-1 text-gray-600 font-medium hover:bg-gray-100">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H3V9h2a4 4 0 004-4V3l4 4-4 4z" /></svg>
-                      <span>Informes</span>
+                      <span class="hidden lg:inline">Informes</span>
                   </a>
                   
-                  <!-- Settings Button with Dropdown Menu -->
                   <div #configContainer class="relative">
                       <button (click)="toggleConfigMenu()" class="text-sm p-2 rounded-md flex items-center space-x-1 text-gray-600 font-medium hover:bg-gray-100">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066 2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                          <span>Configuración</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066 2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                          <span class="hidden lg:inline">Configuración</span>
                       </button>
                       @if(isConfigMenuOpen()) {
                           <div class="absolute top-full right-0 mt-2 w-72 bg-blue-800 rounded-md shadow-xl text-white font-semibold text-sm z-30">
@@ -353,11 +377,11 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                   <div #userContainer class="relative">
                       <button (click)="toggleUserMenu()" class="flex items-center space-x-2">
                         <div class="h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold" [style.background-color]="'var(--color-primary-medium)'">{{ userProfile().nombre.charAt(0) }}</div>
-                          <div class="text-left">
+                          <div class="text-left hidden lg:block">
                               <div class="font-semibold text-gray-800">{{ userProfile().nombre }}</div>
                               <div class="text-xs text-gray-500">{{ userProfile().correo }}</div>
                           </div>
-                          <svg class="h-5 w-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                          <svg class="h-5 w-5 text-gray-500 hidden lg:block" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                       </button>
                       @if (isUserMenuOpen()) {
                           <div class="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border text-gray-800 z-30">
@@ -399,20 +423,18 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
             </div>
         </header>
 
-        <!-- Main Content Area (Dynamic) -->
         <main class="flex-1 overflow-y-auto">
           @if(isUserLoggedIn()){
             @switch (activeView()) {
               @case ('calendar') {
-              <div class="p-8 flex flex-1 h-full">
-                  <!-- Calendar -->
+              <div class="p-4 sm:p-6 lg:p-8 flex flex-1 h-full">
                   <div class="flex-1 flex flex-col bg-white rounded-lg shadow-sm border">
-                    <div class="flex items-center justify-between p-4 border-b">
-                      <div class="flex items-center space-x-4">
+                    <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-b gap-4">
+                      <div class="flex items-center space-x-2 sm:space-x-4">
                         <button (click)="goToToday()" class="px-4 py-1.5 text-sm font-semibold text-gray-700 bg-gray-200 border rounded-md hover:bg-gray-300">Hoy</button>
-                        <div #datePickerContainer class="relative flex items-center space-x-2">
+                        <div #datePickerContainer class="relative flex items-center space-x-1 sm:space-x-2">
                             <button (click)="navigateCalendar(-1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
-                              <button (click)="toggleDatePicker()" class="text-lg font-bold text-gray-800 uppercase tracking-wider">{{ calendarHeaderTitle() }}</button>
+                              <button (click)="toggleDatePicker()" class="text-base sm:text-lg font-bold text-gray-800 uppercase tracking-wider text-center">{{ calendarHeaderTitle() }}</button>
                             <button (click)="navigateCalendar(1)" class="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
                             @if(isDatePickerOpen()){
                               <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-lg shadow-lg border z-20 p-4">
@@ -440,9 +462,9 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                     @switch(calendarView()){
                       @case('month'){
                         <div class="grid grid-cols-7 flex-1">
-                          @for(day of weekDays; track day) {<div class="py-3 text-center text-sm font-semibold text-gray-500 border-b border-r">{{ day }}</div>}
+                          @for(day of weekDays; track day) {<div class="py-3 text-center text-xs sm:text-sm font-semibold text-gray-500 border-b border-r">{{ day }}</div>}
                           @for(day of calendarDays(); track day.fullDate) {
-                            <div (click)="handleDayClick(day, $event)" class="p-2 border-b border-r flex flex-col min-h-[120px] cursor-pointer relative" [class.bg-gray-50]="!day.isCurrentMonth">
+                            <div (click)="handleDayClick(day, $event)" class="p-1 sm:p-2 border-b border-r flex flex-col min-h-[80px] sm:min-h-[120px] cursor-pointer relative" [class.bg-gray-50]="!day.isCurrentMonth">
                               <span class="text-sm font-medium self-end" [ngClass]="{'text-gray-400': !day.isCurrentMonth, 'text-white bg-[--color-primary-text]': day.isToday, 'rounded-full w-7 h-7 flex items-center justify-center': day.isToday}">{{ day.day }}</span>
                               <div class="mt-1 space-y-1 text-xs event-container">
                                 @for(event of day.events; track event.title) {
@@ -469,8 +491,8 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                       @case('week'){
                         <div class="grid grid-cols-7 flex-1">
                           @for(day of weekData(); track day.fullDate){
-                            <div class="text-center py-3 font-semibold text-gray-600 border-b border-r">
-                              {{ day.dayName }} <span class="text-gray-500 font-bold">{{day.dayNumber}}</span>
+                            <div class="text-center py-3 font-semibold text-gray-600 border-b border-r text-xs sm:text-base">
+                              {{ day.dayName }} <span class="text-gray-500 font-bold block sm:inline">{{day.dayNumber}}</span>
                             </div>
                           }
                           @for(day of weekData(); track day.fullDate){
@@ -530,10 +552,9 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                 </div>
               }
               @case ('cumplimiento') {
-                <div class="flex flex-1 h-full">
-                  <!-- Secondary Sidebar for Cumplimiento -->
-                  <aside class="w-60 flex-shrink-0 bg-white border-r flex flex-col">
-                      <nav class="flex-1 px-2 py-4 space-y-1">
+                <div class="flex flex-col md:flex-row flex-1 h-full">
+                  <aside class="w-full md:w-60 flex-shrink-0 bg-white border-b md:border-b-0 md:border-r">
+                      <nav class="flex flex-row md:flex-col flex-wrap justify-center md:justify-start px-2 py-2 md:py-4 space-x-1 md:space-x-0 md:space-y-1">
                           <a href="#" (click)="setComplianceModuleView('normograma')" class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md" [ngClass]="{'bg-gray-200 text-gray-900': complianceModuleView() === 'normograma', 'hover:bg-gray-100': complianceModuleView() !== 'normograma'}">
                               Normograma
                           </a>
@@ -549,62 +570,58 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                       </nav>
                   </aside>
 
-                  <!-- Content Area for Cumplimiento -->
-                  <div class="flex-1 overflow-y-auto p-6">
+                  <div class="flex-1 overflow-y-auto p-4 sm:p-6">
                     @if(isComplianceDetailView()){
                         <div class="flex-grow flex flex-col p-2 space-y-2">
                           <button (click)="goBackToComplianceList()" class="self-start mb-4 flex items-center text-sm text-[--color-primary-text] hover:underline">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Volver a Operaciones
                           </button>
-                          <!-- Form -->
                           <div class="bg-gray-100 p-2 border rounded-md">
                               <div class="bg-[--color-primary-dark] text-white font-bold p-2 rounded-t-md text-sm">CUMPLIMIENTO</div>
                               <div class="p-4 bg-white rounded-b-md">
                                   <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-xs">
-                                      <!-- Left Column -->
                                       <div>
-                                          <div class="grid grid-cols-3 gap-2 items-center mb-2">
+                                          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center mb-2">
                                               <label class="font-semibold text-gray-700">CODIGO:</label>
-                                              <input type="text" [value]="cumplimientoDetailData().codigo" class="col-span-2 p-1 border rounded-md bg-gray-100" readonly>
+                                              <input type="text" [value]="cumplimientoDetailData().codigo" class="col-span-1 sm:col-span-2 p-1 border rounded-md bg-gray-100" readonly>
                                           </div>
-                                          <div class="grid grid-cols-3 gap-2 items-center mb-2">
+                                          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center mb-2">
                                               <label class="font-semibold text-gray-700"><span class="text-red-500">*</span> NOMBRE CUMPLIMIENTO:</label>
-                                              <input type="text" [value]="cumplimientoDetailData().nombre" class="col-span-2 p-1 border rounded-md">
+                                              <input type="text" [value]="cumplimientoDetailData().nombre" class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                                           </div>
-                                          <div class="grid grid-cols-3 gap-2 items-center">
+                                          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
                                               <label class="font-semibold text-gray-700"><span class="text-red-500">*</span> DESCRIPCIÓN:</label>
-                                              <input type="text" [value]="cumplimientoDetailData().descripcion" class="col-span-2 p-1 border rounded-md">
+                                              <input type="text" [value]="cumplimientoDetailData().descripcion" class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                                           </div>
                                       </div>
-                                      <!-- Right Column -->
                                       <div>
-                                          <div class="grid grid-cols-3 gap-2 items-center mb-2">
+                                          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center mb-2">
                                               <label class="font-semibold text-gray-700"><span class="text-red-500">*</span> TIPO CUMPLIMIENTOS:</label>
-                                              <select class="col-span-2 p-1 border rounded-md">
+                                              <select class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                                                   <option [selected]="cumplimientoDetailData().tipo === 'NORMATIVO'">NORMATIVO</option>
                                               </select>
                                           </div>
                                       </div>
                                   </div>
                                   <div class="grid grid-cols-1 gap-y-3 text-xs mt-3 border-t pt-3">
-                                      <div class="grid grid-cols-6 gap-2 items-center">
+                                      <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 items-center">
                                           <label class="col-span-1 font-semibold text-gray-700">TITULO NORMOGRAMA:</label>
-                                          <select class="col-span-5 p-1 border rounded-md"></select>
+                                          <select class="col-span-full sm:col-span-5 p-1 border rounded-md"></select>
                                       </div>
-                                      <div class="grid grid-cols-6 gap-2 items-center">
+                                      <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 items-center">
                                           <label class="col-span-1 font-semibold text-gray-700">NÚMERO DE LEY/RES:</label>
-                                          <input type="text" class="col-span-5 p-1 border rounded-md">
+                                          <input type="text" class="col-span-full sm:col-span-5 p-1 border rounded-md">
                                       </div>
-                                      <div class="grid grid-cols-6 gap-2 items-center">
+                                      <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 items-center">
                                           <label class="col-span-1 font-semibold text-gray-700">UNIDAD ORGANIZACIONAL:</label>
-                                          <select class="col-span-5 p-1 border rounded-md"></select>
+                                          <select class="col-span-full sm:col-span-5 p-1 border rounded-md"></select>
                                       </div>
-                                      <div class="grid grid-cols-6 gap-2 items-center">
+                                      <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 items-center">
                                           <label class="col-span-1 font-semibold text-gray-700">USUARIO:</label>
-                                          <input type="text" [value]="cumplimientoDetailData().usuario" class="col-span-2 p-1 border rounded-md bg-gray-100" readonly>
-                                          <label class="col-span-1 font-semibold text-gray-700 text-right">FECHA CREACIÓN:</label>
-                                          <input type="text" [value]="cumplimientoDetailData().fechaCreacion" class="col-span-2 p-1 border rounded-md bg-gray-100" readonly>
+                                          <input type="text" [value]="cumplimientoDetailData().usuario" class="col-span-full sm:col-span-2 p-1 border rounded-md bg-gray-100" readonly>
+                                          <label class="col-span-1 font-semibold text-gray-700 text-left sm:text-right">FECHA CREACIÓN:</label>
+                                          <input type="text" [value]="cumplimientoDetailData().fechaCreacion" class="col-span-full sm:col-span-2 p-1 border rounded-md bg-gray-100" readonly>
                                       </div>
                                   </div>
                                   <div class="flex justify-center mt-3">
@@ -612,16 +629,15 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                   </div>
                               </div>
                           </div>
-                          <!-- Reports -->
                           <div class="bg-gray-100 p-2 border rounded-md flex-grow flex flex-col">
                               <div class="bg-[--color-primary-dark] text-white font-bold p-2 rounded-t-md text-sm">REPORTES</div>
                               <div class="bg-white rounded-b-md flex-grow flex flex-col">
-                                  <div class="flex items-center space-x-2 p-2 bg-gray-50 border-b text-xs">
+                                  <div class="flex items-center space-x-2 p-2 bg-gray-50 border-b text-xs flex-wrap">
                                       <button (click)="openReportModal()" class="flex items-center space-x-1 text-gray-600 hover:text-[--color-primary-text]"><span>+ Insertar</span></button>
                                       <button (click)="openReportModal(selectedReportItem())" [disabled]="selectedReportIds().size !== 1" class="flex items-center space-x-1 text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><span>Modificar</span></button>
                                       <button [disabled]="selectedReportIds().size === 0" class="flex items-center space-x-1 text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><span>- Eliminar</span></button>
                                   </div>
-                                  <div class="overflow-auto flex-grow">
+                                  <div class="overflow-x-auto flex-grow">
                                       <table class="min-w-full text-xs">
                                           <thead class="bg-gray-50 sticky top-0">
                                               <tr>
@@ -655,14 +671,13 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                     } @else {
                         @switch(complianceModuleView()){
                           @case('normograma'){
-                              <!-- Normograma Module -->
                               <div class="h-full flex flex-col">
                                   @if (normogramaSubView() === 'grilla') {
                                   <div class="flex-grow bg-white rounded-lg shadow-md flex flex-col">
                                       <div class="flex-shrink-0 p-3 bg-gray-100 rounded-t-lg border-b">
                                       <h2 class="text-sm font-semibold text-gray-600">GESTIÓN NORMOGRAMA</h2>
                                       </div>
-                                      <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
+                                      <div class="flex items-center flex-wrap gap-2 p-3 bg-gray-50 border-b">
                                       <button (click)="openNormogramaModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
                                       <button (click)="openNormogramaModal(selectedNormogramaItem())" [disabled]="selectedNormogramaIds().size !== 1" [class.cursor-not-allowed]="selectedNormogramaIds().size !== 1" [class.text-gray-400]="selectedNormogramaIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
                                       <button (click)="deleteSelectedNormogramaItems()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
@@ -670,7 +685,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                       <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>
                                       <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
                                       </div>
-                                      <div class="overflow-auto flex-grow">
+                                      <div class="overflow-x-auto flex-grow">
                                       <table class="min-w-full divide-y divide-gray-200 text-sm">
                                           <thead class="bg-gray-50 sticky top-0">
                                           <tr>
@@ -715,32 +730,32 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                       Volver a Normograma
                                     </button>
                                     <div class="flex-grow flex flex-col text-sm">
-                                        <!-- Search Box Section -->
                                         <div class="bg-gray-200 p-4 border-b">
                                             <div class="bg-[--color-primary-darker] p-2 text-white font-bold text-center text-xs">BUSCADOR NORMOGRAMA</div>
-                                            <div class="bg-white p-4 flex items-center justify-center space-x-2">
-                                                <div class="relative flex-grow">
+                                            <div class="bg-white p-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+                                                <div class="relative flex-grow w-full">
                                                     <input type="text" #searchInput (input)="normogramaSearchQuery.set(searchInput.value)" [value]="normogramaSearchQuery()" class="w-full p-2 border rounded-md pr-10">
                                                     <span class="absolute right-3 top-2.5 text-gray-400">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
                                                     </span>
                                                 </div>
-                                                <button (click)="searchNormograma()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Buscar</button>
-                                                <button (click)="clearNormogramaSearch()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Limpiar</button>
+                                                <div class="flex gap-2 w-full sm:w-auto">
+                                                    <button (click)="searchNormograma()" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Buscar</button>
+                                                    <button (click)="clearNormogramaSearch()" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Limpiar</button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <!-- Results Section -->
                                         <div class="flex-grow bg-white flex flex-col">
                                             <div class="flex items-center space-x-2 p-3 bg-[--color-primary-darker] text-white text-xs font-bold">
                                             NORMOGRAMA
                                             </div>
-                                            <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
+                                            <div class="flex items-center flex-wrap gap-2 p-3 bg-gray-50 border-b">
                                                 <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><span>Ver</span></button>
                                                 <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg><span>Buscar</span></button>
                                                 <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>
                                                 <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
                                             </div>
-                                            <div class="overflow-y-auto flex-grow">
+                                            <div class="overflow-x-auto flex-grow">
                                             <table class="min-w-full divide-y divide-gray-200 text-sm">
                                                 <thead class="bg-gray-50 sticky top-0">
                                                 <tr>
@@ -782,12 +797,44 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                               </div>
                           }
                           @case('tipo'){
-                              <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md"><div class="flex items-center space-x-2 p-3 bg-gray-50 border-b"><button (click)="openComplianceModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button><button (click)="openComplianceModal(selectedComplianceItem())" [disabled]="selectedComplianceIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button><button (click)="deleteSelectedComplianceItems()" [disabled]="selectedComplianceIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button><button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button></div><div class="overflow-y-auto flex-grow"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceSelected()" (change)="toggleSelectAllCompliance($event)"></th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th><th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Abreviación</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">@for (item of complianceData(); track item.id) {<tr class="hover:bg-gray-50"><td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceIds().has(item.id)" (change)="toggleSelectComplianceItem(item.id)"></td><td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td><td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.nombre }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td><td class="px-6 py-3 text-sm text-gray-500">{{ item.abreviacion }}</td></tr>} @empty {<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay datos de configuración.</td></tr>}</tbody></table></div></div>
+                              <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md">
+                                <div class="flex items-center flex-wrap gap-2 p-3 bg-gray-50 border-b">
+                                  <button (click)="openComplianceModal()" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
+                                  <button (click)="openComplianceModal(selectedComplianceItem())" [disabled]="selectedComplianceIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
+                                  <button (click)="deleteSelectedComplianceItems()" [disabled]="selectedComplianceIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
+                                  <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.898 0V3a1 1 0 112 0v2.101a7.002 7.002 0 01-11.898 0V3a1 1 0 011-1zM2 10a8 8 0 1116 0 8 8 0 01-16 0zm2.5 1.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>Recargar</span></button>
+                                </div>
+                                <div class="overflow-x-auto flex-grow">
+                                  <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50 sticky top-0">
+                                      <tr>
+                                        <th class="px-4 py-2 text-left"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="isAllComplianceSelected()" (change)="toggleSelectAllCompliance($event)"></th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Abreviación</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                      @for (item of complianceData(); track item.id) {
+                                      <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3"><input type="checkbox" class="rounded text-[--color-primary-text] focus:ring-[--color-primary-medium]" [checked]="selectedComplianceIds().has(item.id)" (change)="toggleSelectComplianceItem(item.id)"></td>
+                                        <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{{ item.codigo }}</td>
+                                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.nombre }}</td>
+                                        <td class="px-6 py-3 text-sm text-gray-500">{{ item.descripcion }}</td>
+                                        <td class="px-6 py-3 text-sm text-gray-500">{{ item.abreviacion }}</td>
+                                      </tr>
+                                      } @empty {
+                                      <tr><td colspan="5" class="text-center py-8 text-gray-500">No hay datos de configuración.</td></tr>
+                                      }
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
                           }
                           @case('operacion'){
                             <div class="flex-grow flex flex-col bg-white rounded-lg shadow-md">
-                                <!-- Toolbar -->
-                                <div class="flex items-center space-x-2 p-3 bg-gray-50 border-b">
+                                <div class="flex items-center flex-wrap gap-2 p-3 bg-gray-50 border-b">
                                     <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Insertar</span></button>
                                     <button (click)="editSelectedComplianceOperation()" [disabled]="selectedComplianceOperationIds().size !== 1" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text] disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg><span>Modificar</span></button>
                                     <button [disabled]="selectedComplianceOperationIds().size === 0" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg><span>Eliminar</span></button>
@@ -796,8 +843,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                     <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M3 3a2 2 0 00-2 2v6a2 2 0 002 2h1V9a4 4 0 014-4h6V3a2 2 0 00-2-2H3z" /></svg><span>Clonar</span></button>
                                     <button class="flex items-center space-x-1 text-sm text-gray-600 hover:text-[--color-primary-text]"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM3 11a1 1 0 100 2h14a1 1 0 100-2H3zM3 15a1 1 0 100 2h14a1 1 0 100-2H3z" /></svg><span>Filtros</span></button>
                                 </div>
-                                <!-- Grid -->
-                                <div class="overflow-y-auto flex-grow">
+                                <div class="overflow-x-auto flex-grow">
                                   <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50 sticky top-0">
                                       <tr>
@@ -838,8 +884,8 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                 </div>
               }
                @case('editProfile') {
-                <div class="p-8">
-                    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
+                <div class="p-4 sm:p-8">
+                    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 sm:p-8">
                         <h2 class="text-2xl font-bold text-gray-800 mb-6">Modificar Mis Datos</h2>
                         <form (submit)="saveProfile($event)">
                             <div class="space-y-4">
@@ -869,8 +915,8 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                 </div>
                }
                @case('changePassword') {
-                <div class="p-8">
-                    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+                <div class="p-4 sm:p-8">
+                    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6 sm:p-8">
                         <h2 class="text-2xl font-bold text-gray-800 mb-6">Cambiar Contraseña</h2>
                         <form>
                             <div class="space-y-4">
@@ -896,12 +942,11 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                 </div>
                }
                @case('manuals') {
-                <div class="p-8">
+                <div class="p-4 sm:p-8">
                   <div class="max-w-5xl mx-auto bg-white rounded-lg shadow-md">
-                    <!-- Header -->
-                    <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                    <div class="p-4 border-b flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50 rounded-t-lg">
                       <h2 class="text-xl font-bold text-gray-700">Gestión de Manuales</h2>
-                      <label class="px-4 py-2 bg-[--color-primary-medium] text-white font-semibold rounded-lg hover:bg-[--color-primary-dark] cursor-pointer flex items-center space-x-2 transition-colors duration-200">
+                      <label class="w-full sm:w-auto px-4 py-2 bg-[--color-primary-medium] text-white font-semibold rounded-lg hover:bg-[--color-primary-dark] cursor-pointer flex items-center justify-center space-x-2 transition-colors duration-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                           <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                         </svg>
@@ -909,7 +954,6 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                         <input type="file" #fileUploadInput class="hidden" accept=".pdf" (change)="handleFileUpload($event)">
                       </label>
                     </div>
-                    <!-- Manuals List Table -->
                     <div class="overflow-x-auto">
                       <table class="min-w-full text-sm text-left text-gray-500">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100">
@@ -960,7 +1004,6 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                }
             }
           } @else {
-            <!-- System Logged Out / Login View -->
             <div class="flex flex-col items-center justify-center h-full bg-gray-100 text-center p-8">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -973,13 +1016,12 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
             </div>
           }
         </main>
-        <!-- Footer -->
         @if(isUserLoggedIn()){
-          <footer class="h-10 bg-white border-t flex items-center justify-between px-8 text-xs text-gray-500">
+          <footer class="h-10 bg-white border-t flex items-center justify-between px-4 sm:px-8 text-xs text-gray-500 flex-shrink-0">
               <div>
                   <span>GCI v1.0.0</span> | 
-                  <span>Angular v{{angularVersion}}</span> |
-                  <span>{{todayString}}</span>
+                  <span class="hidden sm:inline">Angular v{{angularVersion}}</span> |
+                  <span class="hidden sm:inline">{{todayString}}</span>
               </div>
               <div class="relative">
                   <button (click)="isHelpModalOpen.set(true)" class="flex items-center space-x-1 hover:text-[--color-primary-text] hover:underline">
@@ -991,13 +1033,12 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         }
       </div>
 
-       <!-- Event Details Modal -->
        @if(selectedEvent()){
         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
             <header class="p-4 border-b flex justify-between items-center">
               <h3 class="text-lg font-bold text-gray-800">{{selectedEvent()?.title}}</h3>
-              <button (click)="closeEventDetails()" class="p-1 rounded-full hover:bg-gray-200">&times;</button>
+              <button (click)="closeEventDetails()" class="p-1 rounded-full hover:bg-gray-200 text-2xl font-light">&times;</button>
             </header>
             <div class="p-6 space-y-3 text-sm">
               <p><span class="font-semibold text-gray-600 w-28 inline-block">Estado:</span> 
@@ -1016,21 +1057,20 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         </div>
       }
 
-      <!-- Add Event Modal -->
       @if(isAddEventModalOpen()){
         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
             <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg flex justify-between items-center">
                <h3 class="text-lg font-semibold">Crear Nueva Tarea</h3>
-                <button (click)="closeAddEventModal()" class="text-white hover:text-gray-200">&times;</button>
+                <button (click)="closeAddEventModal()" class="text-white hover:text-gray-200 text-2xl font-light">&times;</button>
              </header>
              <form #addEventForm (submit)="saveNewEvent($event, addEventForm)">
-                <div class="p-6 bg-gray-50 space-y-4 text-sm">
+                <div class="p-6 bg-gray-50 space-y-4 text-sm max-h-[70vh] overflow-y-auto">
                    <div>
                       <label class="font-semibold text-gray-700 block mb-1">Título de la Tarea</label>
                       <input type="text" name="title" required class="w-full p-2 border rounded-md">
                    </div>
-                   <div class="grid grid-cols-2 gap-4">
+                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label class="font-semibold text-gray-700 block mb-1">Estado</label>
                         <select name="status" class="w-full p-2 border rounded-md bg-white">
@@ -1055,7 +1095,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                       <label class="font-semibold text-gray-700 block mb-1">Supervisor</label>
                       <input type="text" name="supervisor" required class="w-full p-2 border rounded-md">
                    </div>
-                   <div class="grid grid-cols-2 gap-4">
+                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                           <label class="font-semibold text-gray-700 block mb-1">Fecha Límite</label>
                           <input type="date" name="fechaLimite" [value]="formatDate(newEventDate())" required class="w-full p-2 border rounded-md">
@@ -1076,13 +1116,12 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         </div>
       }
 
-        <!-- Compliance Form Modal -->
-      @if (isComplianceModalOpen()) {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        @if (isComplianceModalOpen()) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
              <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg flex justify-between items-center">
                <h3 class="text-lg font-semibold">{{ editingComplianceItem()?.id ? 'Modificar' : 'Insertar' }} Tipo Cumplimiento</h3>
-                <button (click)="closeComplianceModal()" class="text-white hover:text-gray-200">&times;</button>
+                <button (click)="closeComplianceModal()" class="text-white hover:text-gray-200 text-2xl font-light">&times;</button>
              </header>
             <form (submit)="saveComplianceItem($event)" class="p-6 bg-gray-100">
               <div class="grid grid-cols-1 gap-4 text-sm">
@@ -1101,7 +1140,6 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         </div>
       }
       
-      <!-- Normograma Form Modal -->
       @if (isNormogramaModalOpen()) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl">
@@ -1112,7 +1150,6 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
             <form (submit)="saveNormogramaItem($event)" class="p-6 max-h-[80vh] overflow-y-auto">
               @if(editingNormogramaItem(); as currentItem) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                  <!-- Left Column -->
                   <div class="space-y-4">
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> NÚMERO CONSECUTIVO:</label><input type="text" [value]="currentItem.consecutivo" name="consecutivo" class="mt-1 w-full p-2 border rounded-md" [readOnly]="currentItem.id !== 0"></div>
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> NÚMERO NORMA:</label><input type="text" [value]="currentItem.numeroNorma" name="numeroNorma" class="mt-1 w-full p-2 border rounded-md"></div>
@@ -1124,12 +1161,11 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> ÁREA RESPONSABLE:</label><select name="areaResponsable" [value]="currentItem.areaResponsable" class="mt-1 w-full p-2 border rounded-md"><option>VICEPRESIDENCIA RECURSOS HUMANOS</option></select></div>
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> RESPONSABLE:</label><select name="responsable" [value]="currentItem.responsable" class="mt-1 w-full p-2 border rounded-md"><option>VICEPRESIDENTE DE MARKETING Y CANALES - FERNANDO LOAIZA</option></select></div>
                   </div>
-                  <!-- Right Column -->
                   <div class="space-y-4">
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> TIPO DE NORMA:</label><select name="tipoNorma" [value]="currentItem.tipoNorma" class="mt-1 w-full p-2 border rounded-md"><option>LEY</option><option>CIRCULAR EXTERNA</option><option>DOCUMENTO TÉCNICO</option><option>HOJA DE RUTA</option></select></div>
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> ENTIDAD:</label><input type="text" [value]="currentItem.entidad" name="entidad" class="mt-1 w-full p-2 border rounded-md"></div>
                     <div><label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> FECHA ENTRADA EN VIGENCIA:</label><input type="date" [value]="currentItem.fechaEntradaVigencia" name="fechaEntradaVigencia" class="mt-1 w-full p-2 border rounded-md"></div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div><label class="font-semibold text-gray-700 block">LOB IMPACTADA:</label><input type="text" name="lobImpactada" [value]="currentItem.lobImpactada" class="mt-1 w-full p-2 border rounded-md"></div>
                         <div><label class="font-semibold text-gray-700 block">FECHA ACCIÓN:</label><input type="date" name="fechaAccion" [value]="currentItem.fechaAccion" class="mt-1 w-full p-2 border rounded-md"></div>
                     </div>
@@ -1140,23 +1176,23 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                   </div>
                 </div>
 
-                <!-- URLs Section -->
                 <div class="mt-6 pt-4 border-t">
                   <h4 class="font-bold text-gray-700 mb-2">URLS</h4>
-                  <div class="flex items-center space-x-2">
-                      <button type="button" class="p-1 bg-gray-200 rounded-md hover:bg-gray-300">+</button>
-                      <button type="button" class="p-1 bg-gray-200 rounded-md hover:bg-gray-300">-</button>
-                      <label class="font-semibold text-gray-700">LINK:</label>
-                      <input type="text" name="link" [value]="currentItem.link" class="flex-grow p-2 border rounded-md">
+                  <div class="flex flex-col sm:flex-row items-center gap-2">
+                      <div class="flex-shrink-0 flex items-center space-x-2">
+                        <button type="button" class="p-1 bg-gray-200 rounded-md hover:bg-gray-300">+</button>
+                        <button type="button" class="p-1 bg-gray-200 rounded-md hover:bg-gray-300">-</button>
+                        <label class="font-semibold text-gray-700">LINK:</label>
+                      </div>
+                      <input type="text" name="link" [value]="currentItem.link" class="flex-grow p-2 border rounded-md w-full">
                   </div>
                 </div>
 
-                <!-- User and File Section -->
-                <div class="grid grid-cols-2 gap-x-8 mt-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 mt-4">
                   <div><label class="font-semibold text-gray-700 block">USUARIO:</label><input type="text" name="usuario" [value]="currentItem.usuario" class="mt-1 w-full p-2 border rounded-md bg-gray-100" readonly></div>
                   <div><label class="font-semibold text-gray-700 block">FECHA CREACIÓN:</label><input type="text" name="fechaCreacion" [value]="currentItem.fechaCreacion" class="mt-1 w-full p-2 border rounded-md bg-gray-100" readonly></div>
-                  <div class="col-span-2"><label class="font-semibold text-gray-700 block">ARCHIVO:</label><input type="file" class="mt-1 w-full text-xs"></div>
-                  <div class="col-span-2"><label class="font-semibold text-gray-700 block">DESCRIPCION:</label><input type="text" name="descripcionArchivo" [value]="currentItem.descripcionArchivo" class="mt-1 w-full p-2 border rounded-md"></div>
+                  <div class="col-span-1 sm:col-span-2"><label class="font-semibold text-gray-700 block">ARCHIVO:</label><input type="file" class="mt-1 w-full text-xs"></div>
+                  <div class="col-span-1 sm:col-span-2"><label class="font-semibold text-gray-700 block">DESCRIPCION:</label><input type="text" name="descripcionArchivo" [value]="currentItem.descripcionArchivo" class="mt-1 w-full p-2 border rounded-md"></div>
                 </div>
 
               }
@@ -1171,8 +1207,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
         </div>
       }
       
-      <!-- Compliance Report Form Modal -->
-       @if (isReportModalOpen()) {
+      @if (isReportModalOpen()) {
          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
              <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl">
                  <header class="bg-[--color-primary-dark] text-white p-3 rounded-t-lg flex justify-between items-center">
@@ -1181,19 +1216,18 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                  </header>
                  <form (submit)="saveReportItem($event)" class="p-4 max-h-[80vh] overflow-y-auto text-xs bg-gray-100">
                     @if(editingReportItem(); as currentReport) {
-                        <!-- Compliance Report Section -->
                         <div class="bg-[--color-primary-dark] text-white font-bold p-2 rounded-t-md text-sm">REPORTE DE CUMPLIMIENTO</div>
                         <div class="p-4 bg-white rounded-b-md mb-4 space-y-3">
                             <div>
                                 <label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> NOMBRE DEL REPORTE:</label>
                                 <input type="text" name="reporte" [value]="currentReport.reporte || ''" class="mt-1 w-full p-1 border rounded-md">
                             </div>
-                            <div class="flex items-center space-x-4">
-                                <label class="flex items-center">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:space-x-4">
+                                <label class="flex items-center flex-shrink-0">
                                     <input type="checkbox" name="enlazarFlujo" [checked]="currentReport.enlazarFlujo" class="h-4 w-4 rounded border-gray-300 text-[--color-primary-text]">
                                     <span class="ml-2 font-semibold text-gray-700">ENLAZAR FLUJO DE TRABAJO:</span>
                                 </label>
-                                <input type="text" name="cargo" placeholder="CARGO" [value]="currentReport.cargo || ''" class="p-1 border rounded-md flex-grow">
+                                <input type="text" name="cargo" placeholder="CARGO" [value]="currentReport.cargo || ''" class="p-1 border rounded-md flex-grow w-full">
                             </div>
                             <div>
                                 <label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> RESPONSABLE DEL CIERRE:</label>
@@ -1209,7 +1243,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                                 <label class="font-semibold text-gray-700 block"><span class="text-red-500">*</span> ESPECIFICACIONES:</label>
                                 <textarea name="especificaciones" rows="2" class="mt-1 w-full p-1 border rounded-md">{{currentReport.especificaciones || ''}}</textarea>
                             </div>
-                            <div class="grid grid-cols-2 gap-x-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
                               <div class="space-y-1">
                                   <label class="flex items-center"><input type="checkbox" name="responsableRespaldo" [checked]="currentReport.responsableRespaldo" class="h-4 w-4 rounded text-[--color-primary-text]"><span class="ml-2">RESPONSABLE DE RESPALDO</span></label>
                                   <label class="flex items-center"><input type="checkbox" name="interesados" [checked]="currentReport.interesados" class="h-4 w-4 rounded text-[--color-primary-text]"><span class="ml-2">INTERESADOS</span></label>
@@ -1221,35 +1255,34 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                             </div>
                         </div>
                         
-                        <!-- Periodicity Section -->
                         <div class="bg-[--color-primary-dark] text-white font-bold p-2 rounded-t-md text-sm">PERIODICIDAD</div>
                         <div class="p-4 bg-white rounded-b-md mb-4 space-y-3">
-                            <div class="grid grid-cols-3 gap-4 items-center">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                                 <label class="font-semibold">REPETIR:</label>
-                                <select name="repetir" [value]="currentReport.repetir" class="col-span-2 p-1 border rounded-md">
+                                <select name="repetir" [value]="currentReport.repetir" class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                                     <option>Cada día</option>
                                     <option>Semanalmente</option>
                                     <option>Mensualmente</option>
                                 </select>
                             </div>
-                            <div class="grid grid-cols-3 gap-4 items-center">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                                 <label class="font-semibold">REPETIR CADA:</label>
-                                <div class="col-span-2 flex items-center space-x-2">
+                                <div class="col-span-1 sm:col-span-2 flex items-center space-x-2">
                                     <input type="number" name="repetirCada" [value]="currentReport.repetirCada" class="w-20 p-1 border rounded-md">
                                     <span>DÍA</span>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-3 gap-4 items-center">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                                 <label class="font-semibold">FECHA INICIAL:</label>
-                                <input type="date" name="fechaInicial" [value]="currentReport.fechaInicial" class="col-span-2 p-1 border rounded-md">
+                                <input type="date" name="fechaInicial" [value]="currentReport.fechaInicial" class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                             </div>
-                            <div class="grid grid-cols-3 gap-4 items-center">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                                 <label class="font-semibold">FECHA FINAL:</label>
-                                <input type="date" name="fechaFinal" [value]="currentReport.fechaFinal" class="col-span-2 p-1 border rounded-md">
+                                <input type="date" name="fechaFinal" [value]="currentReport.fechaFinal" class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                             </div>
-                            <div class="grid grid-cols-3 gap-4 items-center">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                                 <label class="font-semibold">HORA:</label>
-                                <input type="time" name="hora" [value]="currentReport.hora" class="col-span-2 p-1 border rounded-md">
+                                <input type="time" name="hora" [value]="currentReport.hora" class="col-span-1 sm:col-span-2 p-1 border rounded-md">
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" name="requiereAdjunto" [checked]="currentReport.requiereAdjunto" class="h-4 w-4 rounded text-[--color-primary-text]">
@@ -1261,7 +1294,6 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
                             </div>
                         </div>
                         
-                        <!-- Custom Reminder Section -->
                         <div class="bg-[--color-primary-dark] text-white font-bold p-2 rounded-t-md text-sm">RECORDATORIO PERSONALIZADO</div>
                         <div class="p-4 bg-white rounded-b-md">
                             <label class="flex items-center">
@@ -1280,8 +1312,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
          </div>
        }
 
-       <!-- Help Modal -->
-      @if(isHelpModalOpen()){
+       @if(isHelpModalOpen()){
           <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
               <header class="p-4 border-b flex justify-between items-center bg-gray-50">
@@ -1340,6 +1371,7 @@ type Theme = 'blue' | 'teal' | 'indigo' | 'slate';
 export class App {
   // --- STATE MANAGEMENT WITH SIGNALS ---
   
+  isSidebarOpen = signal(false);
   isUserLoggedIn = signal<boolean>(true);
   activeView = signal<View>('calendar');
   calendarView = signal<CalendarView>('month');
@@ -1628,33 +1660,53 @@ export class App {
     }
     return ''; // Fallback
   });
-
-  headerBreadcrumb = computed(() => {
+  
+  // +++ Nuevo computed signal para generar los breadcrumbs como array de objetos +++
+  breadcrumbs = computed((): Breadcrumb[] => {
+    const homeCrumb: Breadcrumb = { label: 'Inicio', action: () => this.setView('calendar') };
     const view = this.activeView();
-    if (view === 'calendar') return 'Inicio > Calendario';
-    if (view === 'editProfile') return 'Inicio > Mi Perfil > Modificar Datos';
-    if (view === 'changePassword') return 'Inicio > Mi Perfil > Cambiar Contraseña';
-    if (view === 'manuals') return 'Inicio > Manuales';
 
-    if (view === 'cumplimiento') {
-       if (this.isComplianceDetailView()) {
-         return 'Inicio > Cumplimiento > Detalle de Operación';
-       }
-      const moduleView = this.complianceModuleView();
-      let moduleName = '';
-      switch(moduleView) {
-        case 'normograma': moduleName = 'Normograma'; break;
-        case 'tipo': moduleName = 'Tipo Cumplimiento'; break;
-        case 'operacion': moduleName = 'Operación de Cumplimiento'; break;
-        case 'informes': moduleName = 'Informes'; break;
-      }
-      return `Inicio > Cumplimiento > ${moduleName}`;
+    switch (view) {
+      case 'calendar':
+        return [homeCrumb, { label: 'Calendario' }];
+      case 'editProfile':
+        return [homeCrumb, { label: 'Mi Perfil' }, { label: 'Modificar Datos' }];
+      case 'changePassword':
+          return [homeCrumb, { label: 'Mi Perfil' }, { label: 'Cambiar Contraseña' }];
+      case 'manuals':
+          return [homeCrumb, { label: 'Manuales' }];
+      case 'workflow':
+          return [homeCrumb, { label: 'Work Flow'}];
+      case 'cumplimiento':
+        const complianceCrumb: Breadcrumb = { 
+          label: 'Cumplimiento', 
+          action: () => {
+            // Al hacer clic en "Cumplimiento", vuelve a la vista principal del módulo.
+            this.setView('cumplimiento');
+            this.isComplianceDetailView.set(false);
+            this.complianceModuleView.set('normograma');
+          }
+        };
+
+        if (this.isComplianceDetailView()) {
+          return [homeCrumb, complianceCrumb, { label: 'Detalle de Operación' }];
+        }
+
+        const moduleView = this.complianceModuleView();
+        let moduleName = '';
+        switch (moduleView) {
+          case 'normograma': moduleName = 'Normograma'; break;
+          case 'tipo': moduleName = 'Tipo Cumplimiento'; break;
+          case 'operacion': moduleName = 'Operación de Cumplimiento'; break;
+          case 'informes': moduleName = 'Informes'; break;
+        }
+        return [homeCrumb, complianceCrumb, { label: moduleName }];
+
+      default:
+        return [homeCrumb];
     }
-    if (view === 'workflow') {
-      return `Inicio > work flow`;
-    }
-    return 'Inicio'; // Fallback
   });
+
 
   // --- CLICK OUTSIDE HANDLER ---
   @HostListener('document:click', ['$event'])
@@ -1676,6 +1728,14 @@ export class App {
     }
     if (this.isDatePickerOpen() && this.datePickerContainerRef && !this.datePickerContainerRef.nativeElement.contains(event.target)) {
       this.isDatePickerOpen.set(false);
+    }
+  }
+
+  // --- SIDEBAR RESIZE HANDLER ---
+  @HostListener('window:resize', ['$event'])
+  onResize(event: Event) {
+    if (window.innerWidth >= 768) { // md breakpoint is 768px
+      this.isSidebarOpen.set(false); 
     }
   }
 
@@ -1717,6 +1777,9 @@ export class App {
     this.calendarView.set(view);
   }
   
+  toggleSidebar() { this.isSidebarOpen.update(v => !v); }
+  closeSidebar() { this.isSidebarOpen.set(false); }
+
   toggleUserMenu() { 
     this.isUserMenuOpen.update(v => !v); 
     if (this.isUserMenuOpen()) {
@@ -2283,4 +2346,3 @@ export class App {
 
   private getDateKey = (date: Date): string => { return date.toISOString().split('T')[0]; }
 }
-
